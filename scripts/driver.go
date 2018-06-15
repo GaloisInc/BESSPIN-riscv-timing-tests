@@ -126,16 +126,16 @@ func contains(objects []string, object string) bool {
 }
 
 func run(instr string, str_i1 string, str_i2 string, log_filename string,
-	emulator_dir string) {
+	emulator_dir string, emulator_bin string, plots_dir string) {
 	working_dir := bagpipe.WorkingDirectory()
+
 	exec_file := instr + "." + str_i1 + "." + str_i2
 
 	if bagpipe.FileExists(working_dir+"/"+exec_file) == false {
 		log.Fatal("could not find " + exec_file)
 	}
 
-	cmd := "./emulator-freechips.rocketchip.system-DefaultConfig -s 0 -c " +
-		working_dir + "/" + exec_file
+	cmd := emulator_bin + " -s 0 -c " + working_dir + "/" + exec_file
 
 	bagpipe.UpdateStatus("running " + exec_file + " ... ")
 	output := bagpipe.ExecCommand(cmd, emulator_dir)
@@ -152,15 +152,26 @@ func run(instr string, str_i1 string, str_i2 string, log_filename string,
 	cycle_count := match[2]
 
 	log_line := str_i1 + " " + str_i2 + " " + instr_count + " " + cycle_count
-	bagpipe.AppendFile(emulator_dir + "/" + log_filename, log_line + "\n")
+	bagpipe.AppendFile(plots_dir+"/"+log_filename, log_line+"\n")
 }
 
-func run_benchmark(instr string, operands []string) {
-	emulator_dir := bagpipe.HomeDirectory() + "/src/rocket-chip/emulator"
+func run_benchmark(arch string, instr string, operands []string) {
+	var emulator_dir string
+	var emulator_bin string
+
+	if arch == "rock" {
+		emulator_bin = "./emulator-freechips.rocketchip.system-DefaultConfig"
+		emulator_dir = bagpipe.HomeDirectory() + "/src/rocket-chip/emulator"
+	} else if arch == "boom" {
+		emulator_bin = "./simulator-boom.system-BoomConfig"
+		emulator_dir = bagpipe.HomeDirectory() + "/src/boom-template/verisim"
+	}
+
+	plots_dir := bagpipe.WorkingDirectory() + "/../results/" + arch + "/data"
 
 	log_filename := "out." + instr
-	if bagpipe.FileExists(emulator_dir + "/" + log_filename) {
-		bagpipe.DeleteFile(emulator_dir + "/" + log_filename)
+	if bagpipe.FileExists(plots_dir + "/" + log_filename) {
+		bagpipe.DeleteFile(plots_dir + "/" + log_filename)
 	}
 
 	for i1, _ := range operands {
@@ -168,11 +179,13 @@ func run_benchmark(instr string, operands []string) {
 
 		for i2, _ := range operands {
 			str_i2 := strconv.Itoa(i2)
-            run(instr, str_i1, str_i2, log_filename, emulator_dir)
+			run(instr, str_i1, str_i2, log_filename, emulator_dir, emulator_bin,
+				plots_dir)
 		}
 	}
 
-	bagpipe.UpdateStatus("test complete, results in " + log_filename + ".\n")
+	bagpipe.UpdateStatus("test complete, results in " + arch + "/" +
+		log_filename + ".\n")
 }
 
 func main() {
@@ -222,13 +235,19 @@ func main() {
 			} else if cmd == "build-dp" {
 				build(dp_objects, dp_operands, dtype_dp)
 			} else if strings.HasPrefix(cmd, "run-") {
-				instr := cmd[4:]
+				arch := cmd[4:8]
+
+				if arch != "rock" && arch != "boom" {
+					log.Fatal("did not recognize architecture.")
+				}
+
+				instr := cmd[9:]
 				if contains(int_objects, instr) {
-					run_benchmark(instr, int_operands)
+					run_benchmark(arch, instr, int_operands)
 				} else if contains(sp_objects, instr) {
-					run_benchmark(instr, sp_operands)
+					run_benchmark(arch, instr, sp_operands)
 				} else if contains(dp_objects, instr) {
-					run_benchmark(instr, dp_operands)
+					run_benchmark(arch, instr, dp_operands)
 				} else {
 					log.Fatal(instr + " not found among instructions")
 				}

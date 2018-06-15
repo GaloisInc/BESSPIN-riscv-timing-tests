@@ -9,27 +9,34 @@
 
 void thread_entry(int cid, int nc)
 {
-    size_t cycles = 0 - read_csr(mcycle);
-    size_t instrs = 0 - read_csr(minstret);
+    size_t cycles = 0;
+    size_t instrs = 0;
 
     asm volatile (
             "mv             x20,    zero;"
-            "li             x21,    1024;"
+            "li             x21,    10;"
             "li             x22, "  xstr(OP1) ";"
             "li             x23, "  xstr(OP2) ";"
+
+            "csrr           x25,  mcycle;"
+            "csrr           x26,  minstret;"
 
         "loop:"
             xstr(INST)  "   x24,  x22,  x23;"
             "addi           x20,  x20,  1;"
             "bleu           x20,  x21,  loop;"
 
-        ::: "x20", "x21", "x22", "x23", "x24", "cc"
+            "csrr           x27,  mcycle;"
+            "csrr           x28,  minstret;"
+            "fence;"
+
+            "subw           %[c], x27, x25;"
+            "subw           %[i], x28, x26;"
+
+        : [c] "=r" (cycles), [i] "=r" (instrs)
+        :
+        : "x20", "x21", "x22", "x23", "x24", "x25", "x26", "x27", "x28", "cc"
     );
-
-    cycles += read_csr(mcycle);
-    instrs += read_csr(minstret);
-
-    asm volatile("fence");
 
     printf("instrs\t%8d\tcycles\t%8d\n", (int) instrs, (int) cycles);
     barrier(nc);
