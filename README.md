@@ -27,6 +27,11 @@ This code measures the latency of various RISV instructions from the Base ISA an
     R --no-save < plot.R
 
 
+### Note about Debug Interrupts
+
+If you plan to tweak the loop count in `src/*-driver.c`, note that running the test for too long may cause the (occassional) debug interrupts from the simulation to perturb the results.  In particular, if you see a wide variation in the instruction count (despite only changing the operand values), then the debug interrupts are suspect.  See https://github.com/freechipsproject/rocket-chip/issues/1495 for details and how to know whether the debug interrupt occured.
+
+
 ## Results
 
 ### Interesting Cases
