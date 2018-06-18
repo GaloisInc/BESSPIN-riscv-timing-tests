@@ -6,7 +6,7 @@ This code measures the latency of various RISV instructions from the Base ISA an
 ### Prerequisites
 
   - Go (with the `gitlab.com/ashay/bagpipe` package)
-  - R (with `ggplot` and `reshape2` packages)
+  - R (with `ggplot2` and `reshape2` packages)
   - Scripts assume `riscv64-unknown-elf-gcc` is in `PATH`, and that the Rocket chip is built in `${HOME}/src/rocket-chip/emulator`.
 
 

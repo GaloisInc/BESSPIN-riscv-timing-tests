@@ -2,7 +2,7 @@ library(ggplot2)
 library(reshape2)
 
 plot_int_instr_variation <- function(instr) {
-    in_file <- paste("../results/data/out.", instr, sep = "")
+    in_file <- paste("../data/out.", instr, sep = "")
     data <- read.table(in_file, header = F)
 
     data$V1 <- data$V1 * 4
@@ -24,11 +24,11 @@ plot_int_instr_variation <- function(instr) {
     zp1 <- zp1 + geom_text(aes(Var1, Var2, label = round(value, 1)), size = 0.7)
     zp1 <- zp1 + coord_equal()
 
-    ggsave(paste("../results/plots/plot-", instr, ".png", sep = ""), width = 2, height = 2, dpi = 420)
+    ggsave(paste("plot-", instr, ".png", sep = ""), width = 2, height = 2, dpi = 420)
 }
 
 plot_fp_instr_variation <- function(instr) {
-    in_file <- paste("../results/data/out.", instr, sep = "")
+    in_file <- paste("../data/out.", instr, sep = "")
     data <- read.table(in_file, header = F)
 
     data$V1 <- data$V1 * 1
@@ -50,7 +50,7 @@ plot_fp_instr_variation <- function(instr) {
     zp1 <- zp1 + geom_text(aes(Var1, Var2, label = round(value, 1)), size = 1.5)
     zp1 <- zp1 + coord_equal()
 
-    ggsave(paste("../results/plots/plot-", instr, ".png", sep = ""), width = 2, height = 2)
+    ggsave(paste("plot-", instr, ".png", sep = ""), width = 2, height = 2)
 }
 
 plot_int_instr_variation("add")
