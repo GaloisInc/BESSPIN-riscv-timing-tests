@@ -17,14 +17,17 @@ This code measures the latency of various RISV instructions from the Base ISA an
     # Specify targets to build
     go run ../scripts/driver.go build-int build-sp build-dp
     
-    # Run tests for a specific instructions
-    go run ../scripts/driver.go run-fdiv.s
-    go run ../scripts/driver.go run-add
-    go run ../scripts/driver.go run-div
+    # Run tests for a specific architecture and instruction
+    go run ../scripts/driver.go run-rock-fdiv.s
+    go run ../scripts/driver.go run-boom-add
+    go run ../scripts/driver.go run-boom-div
     
     # Plot data (for all instructions)
-    cd ../scripts
-    R --no-save < plot.R
+    cd ../results/rock/plots
+    R --no-save < ../../../scripts/plot.R
+
+    cd ../results/boom/plots
+    R --no-save < ../../../scripts/plot.R
 
 
 ### Note about Debug Interrupts
