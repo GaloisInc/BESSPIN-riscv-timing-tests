@@ -34,41 +34,23 @@ If you plan to tweak the loop count in `src/*-driver.c`, note that running the t
 
 ## Results
 
-### Interesting Cases
-<img src = "results/plots/plot-div.png" width = "400px" />
-<img src = "results/plots/plot-mul.png" width = "400px" />
-<img src = "results/plots/plot-fdiv.s.png" width = "400px" />
+The following tables show the slowdown in instruction execution based on the choice of operand values.  For integer instructions, the operands range from 0x0 to 0x7fff\_ffff\_ffff\_ffff, where each increment represents the lowermost bits (in multiples of 4) being set to 1s.  For floating-point instructions, the operands are from the set { zero, normal, subnormal, +inf, -inf, and not-a-number }.
 
-### Not-So-Interesting Cases
-<img src = "results/plots/plot-add.png" width = "400px" />
-<img src = "results/plots/plot-and.png" width = "400px" />
-<img src = "results/plots/plot-divu.png" width = "400px" />
-<img src = "results/plots/plot-mulh.png" width = "400px" />
-<img src = "results/plots/plot-mulhsu.png" width = "400px" />
-<img src = "results/plots/plot-mulhu.png" width = "400px" />
-<img src = "results/plots/plot-or.png" width = "400px" />
-<img src = "results/plots/plot-rem.png" width = "400px" />
-<img src = "results/plots/plot-remu.png" width = "400px" />
-<img src = "results/plots/plot-sll.png" width = "400px" />
-<img src = "results/plots/plot-slt.png" width = "400px" />
-<img src = "results/plots/plot-sltu.png" width = "400px" />
-<img src = "results/plots/plot-sra.png" width = "400px" />
-<img src = "results/plots/plot-srl.png" width = "400px" />
-<img src = "results/plots/plot-sub.png" width = "400px" />                                                                                                                        <img src = "results/plots/plot-xor.png" width = "400px" />
-<img src = "results/plots/plot-fmax.s.png" width = "400px" />
-<img src = "results/plots/plot-fmax.d.png" width = "400px" />
-<img src = "results/plots/plot-fmin.s.png" width = "400px" />
-<img src = "results/plots/plot-fmin.d.png" width = "400px" />
-<img src = "results/plots/plot-fsgnjx.s.png" width = "400px" />
-<img src = "results/plots/plot-fsgnjx.d.png" width = "400px" />
-<img src = "results/plots/plot-fsgnjn.s.png" width = "400px" />
-<img src = "results/plots/plot-fsgnjn.d.png" width = "400px" />
-<img src = "results/plots/plot-fsgnj.s.png" width = "400px" />
-<img src = "results/plots/plot-fsgnj.d.png" width = "400px" />
-<img src = "results/plots/plot-fdiv.d.png" width = "400px" />
-<img src = "results/plots/plot-fmul.s.png" width = "400px" />
-<img src = "results/plots/plot-fmul.d.png" width = "400px" />
-<img src = "results/plots/plot-fsub.s.png" width = "400px" />
-<img src = "results/plots/plot-fsub.d.png" width = "400px" />
-<img src = "results/plots/plot-fadd.s.png" width = "400px" />
-<img src = "results/plots/plot-fadd.d.png" width = "400px" />
+### Rocket
+
+Plots for rocket chip are located [here](rocket-results.md).
+
+|  instruction(s) | slowdown |
+| --------------- | -------- |
+| `fdiv.d` | 11.1x |
+| `div`, `divu`, `rem`, `remu` | 10.8x |
+| `fdiv.s` | 5.6x |
+| `mul` | 2.3x |
+| `add`, `and`, `or`, `sll`, `slt`, `sltu` `srd`, `srl`, `sub`, `xor` | 1.6x |
+| `mulh`, `mulhsu`, `mulu` | 1.3x |
+| `fmax.d`, `fmin.d`, `fsgnj.d`, `fsgnjn.d`, `fsgnjx.d` | 1.1x |
+
+
+### BOOM
+
+To be processed.
