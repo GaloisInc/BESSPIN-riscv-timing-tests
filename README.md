@@ -57,8 +57,5 @@ Plots for boom chip are located [here](boom-results.md).
 
 |  instruction(s) | slowdown |
 | --------------- | -------- |
-| [`div`](results/boom/plots/plot-div.png), [`divu`](results/boom/plots/plot-divu.png), [`rem`](results/boom/plots/plot-rem.png), [`remu`](results/boom/plots/plot-remu.png) | 7x |
+| [`div`](results/boom/plots/plot-div.png), [`divu`](results/boom/plots/plot-divu.png), [`rem`](results/boom/plots/plot-rem.png), [`remu`](results/boom/plots/plot-remu.png) | 6.1x |
 | [`fdiv.s`](results/boom/plots/plot-fdiv.s.png), [`fdiv.d`](results/boom/plots/plot-fdiv.d.png) | 3.3x |
-| [`add`](results/boom/plots/plot-add.png), [`and`](results/boom/plots/plot-and.png), [`mul`](results/boom/plots/plot-mul.png), [`mulh`](results/boom/plots/plot-mulh.png), [`mulhsu`](results/boom/plots/plot-mulhsu.png), [`mulhu`](results/boom/plots/plot-mulhu.png), [`or`](results/boom/plots/plot-or.png), [`slt`](results/boom/plots/plot-slt.png), [`sltu`](results/boom/plots/plot-sltu.png), [`sra`](results/boom/plots/plot-sra.png), [`srl`](results/boom/plots/plot-srl.png), [`sub`](results/boom/plots/plot-sub.png), [`xor`](results/boom/plots/plot-xor.png) | 1.2x |
-| [`fadd.s`](results/boom/plots/plot-fadd.s.png), [`fmax.s`](results/boom/plots/plot-fmax.s.png), [`fmin.s`](results/boom/plots/plot-fmin.s.png), [`fmul.s`](results/boom/plots/plot-fmul.s.png), [`fsgnj.s`](results/boom/plots/plot-fsgnj.s.png), [`fsgnjn.s`](results/boom/plots/plot-fsgnjn.s.png), [`fsgnjx.s`](results/boom/plots/plot-fsgnjn.s.png), [`fsub.s`](results/boom/plots/plot-fsub.s.png) | 1.2x |
-| [`fadd.d`](results/boom/plots/plot-fadd.d.png), [`fmax.d`](results/boom/plots/plot-fmax.d.png), [`fmin.d`](results/boom/plots/plot-fmin.d.png), [`fmul.d`](results/boom/plots/plot-fmul.d.png), [`fsgnj.d`](results/boom/plots/plot-fsgnj.d.png), [`fsgnjn.d`](results/boom/plots/plot-fsgnjn.d.png), [`fsgnjx.d`](results/boom/plots/plot-fsgnjx.d.png), [`fsub.d`](results/boom/plots/plot-fsub.d.png) | 1.2x |

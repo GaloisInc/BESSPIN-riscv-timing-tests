@@ -1,4 +1,4 @@
-## Instruction Latencies Observed on Rocket Chip
+## Instruction Latencies Observed on BOOM Chip
 
 ### Integer Instructions
 
