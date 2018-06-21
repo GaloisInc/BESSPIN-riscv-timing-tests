@@ -80,8 +80,6 @@ func build(objects []string, operands []string, dtype dtype_t) {
 			}
 		}
 	}
-
-	bagpipe.UpdateStatus("build complete.\n")
 }
 
 func clean(objects []string, operands []string) {
