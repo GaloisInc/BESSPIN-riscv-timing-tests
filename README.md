@@ -45,13 +45,10 @@ Plots for rocket chip are located [here](rocket-results.md).
 
 |  instruction(s) | slowdown |
 | --------------- | -------- |
-| [`fdiv.d`](results/rock/plots/plot-fdiv.d.png) | 11.1x |
-| [`div`](results/rock/plots/plot-div.png), [`divu`](results/rock/plots/plot-divu.png), [`rem`](results/rock/plots/plot-rem.png), [`remu`](results/rock/plots/plot-remu.png) | 10.8x |
-| [`fdiv.s`](results/rock/plots/plot-fdiv.s.png) | 5.6x |
-| [`mul`](results/rock/plots/plot-mul.png) | 2.3x |
-| [`add`](results/rock/plots/plot-add.png), [`and`](results/rock/plots/plot-and.png), [`or`](results/rock/plots/plot-or.png), [`sll`](results/rock/plots/plot-sll.png), [`slt`](results/rock/plots/plot-slt.png), [`sltu`](results/rock/plots/plot-sltu.png), [`sra`](results/rock/plots/plot-sra.png), [`srl`](results/rock/plots/plot-srl.png), [`sub`](results/rock/plots/plot-sub.png), [`xor`](results/rock/plots/plot-xor.png) | 1.6x |
-| [`mulh`](results/rock/plots/plot-mulh.png), [`mulhsu`](results/rock/plots/plot-mulhsu.png), [`mulhu`](results/rock/plots/plot-mulhu.png) | 1.3x |
-| [`fmax.d`](results/rock/plots/plot-fmax.d.png), [`fmin.d`](results/rock/plots/plot-fmin.d.png), [`fsgnj.d`](results/rock/plots/plot-fsgnj.d.png), [`fsgnjn.d`](results/rock/plots/plot-fsgnjn.d.png), [`fsgnjx.d`](results/rock/plots/plot-fsgnjx.d.png) | 1.1x |
+| [`fdiv.d`](results/rock/plots/plot-fdiv.d.png) | 10.8x |
+| [`div`](results/rock/plots/plot-div.png), [`divu`](results/rock/plots/plot-divu.png), [`rem`](results/rock/plots/plot-rem.png), [`remu`](results/rock/plots/plot-remu.png) | 10.3x |
+| [`fdiv.s`](results/rock/plots/plot-fdiv.s.png) | 5.3x |
+| [`mul`](results/rock/plots/plot-mul.png) | 1.7x |
 
 
 ### BOOM
