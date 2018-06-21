@@ -13,6 +13,16 @@ void thread_entry(int cid, int nc)
     size_t instrs = 0;
 
     asm volatile (
+            "jal            x0, init;"
+
+        "loop:"
+            xstr(INST)  "   f24,    f22,  f23;"
+            "addi           x20,    x20,  1;"
+            "bleu           x20,    x21,  loop;"
+
+            "jal            x0, term;"
+
+        "init:"
             "mv             x20,    zero;"
             "li             x21,    10;"
 
@@ -25,11 +35,9 @@ void thread_entry(int cid, int nc)
             "csrr           x25,  mcycle;"
             "csrr           x26,  minstret;"
 
-        "loop:"
-            xstr(INST)  "   f24,    f22,  f23;"
-            "addi           x20,    x20,  1;"
-            "bleu           x20,    x21,  loop;"
+            "jal            x0, loop;"
 
+        "term:"
             "csrr           x27,  mcycle;"
             "csrr           x28,  minstret;"
             "fence;"
@@ -39,8 +47,8 @@ void thread_entry(int cid, int nc)
 
         : [c] "=r" (cycles), [i] "=r" (instrs)
         :
-        : "x20", "x21", "x22", "x23", "x24", "x25", "x26", "x27", "x28", "f22",
-            "f23", "f24", "cc"
+        : "x0", "x20", "x21", "x22", "x23", "x24", "x25", "x26", "x27", "x28",
+            "f22", "f23", "f24", "cc"
     );
 
     printf("instrs\t%8d\tcycles\t%8d\n", (int) instrs, (int) cycles);
