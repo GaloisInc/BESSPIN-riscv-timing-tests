@@ -124,16 +124,15 @@ func clean(objects []string, operands []string, dtype dtype_t) {
 		}
 	}
 
-	if bagpipe.FileExists("crt.o") {
-		bagpipe.DeleteFile("crt.o")
+	aux_objects := []string{
+		"fdiv.s.n.n", "fdiv.s.n.s", "fdiv.s.s.n", "fdiv.s.s.s", "crt.o",
+		"driver.o", "syscalls.o",
 	}
 
-	if bagpipe.FileExists("driver.o") {
-		bagpipe.DeleteFile("driver.o")
-	}
-
-	if bagpipe.FileExists("syscalls.o") {
-		bagpipe.DeleteFile("syscalls.o")
+	for _, object := range aux_objects {
+		if bagpipe.FileExists(object) {
+			bagpipe.DeleteFile(object)
+		}
 	}
 
 	bagpipe.ClearStatus()
