@@ -5853,3 +5853,11 @@ src/xor.9.6
 src/xor.9.7
 src/xor.9.8
 src/xor.9.9
+src/fdiv.s.n.n
+src/fdiv.s.n.s
+src/fdiv.s.s.n
+src/fdiv.s.s.s
+src/fdiv.d.n.n
+src/fdiv.d.n.s
+src/fdiv.d.s.n
+src/fdiv.d.s.s

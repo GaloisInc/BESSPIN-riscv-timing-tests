@@ -160,8 +160,6 @@ func exec(instr string, str_i1 string, str_i2 string, emulator_dir string,
 	}
 
 	cmd := emulator_bin + " -s 0 -c " + working_dir + "/" + exec_file
-
-	bagpipe.UpdateStatus("running " + exec_file + " ... ")
 	return bagpipe.ExecCommand(cmd, emulator_dir)
 }
 
@@ -182,6 +180,9 @@ func parse(line string) (string, string) {
 
 func run(instr string, str_i1 string, str_i2 string, log_filename string,
 	emulator_dir string, emulator_bin string, data_dir string) {
+
+	exec_file := instr + "." + str_i1 + "." + str_i2
+	bagpipe.UpdateStatus("running " + exec_file + " ... ")
 
 	output := exec(instr, str_i1, str_i2, emulator_dir, emulator_bin)
 	instrs, cycles := parse(output)
@@ -326,10 +327,16 @@ func rand_benchmark(arch string, opr1 string, opr2 string, instr string,
 			right_operand := generate_operand(opr2, dtype)
 
 			link(instr, opr1, left_operand, opr2, right_operand, dtype)
-			output := exec(instr, opr1, opr2, emulator_dir, emulator_bin)
-			_, cycles := parse(output)
 
-			log.Print(cycles)
+			complete := opr1_ctr*k_repeat_ctr + opr2_ctr
+			total := k_repeat_ctr * k_repeat_ctr
+			status := strconv.Itoa(complete+1) + " of " + strconv.Itoa(total)
+			bagpipe.UpdateStatus("randomizing " + instr + " [" + status + "] ")
+
+			output := exec(instr, opr1, opr2, emulator_dir, emulator_bin)
+
+			_, cycles := parse(output)
+			bagpipe.AppendFile(data_dir+"/"+log_filename, cycles+"\n")
 		}
 	}
 
