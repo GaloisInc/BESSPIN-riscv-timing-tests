@@ -3,6 +3,7 @@ package main
 import (
 	"gitlab.com/ashay/bagpipe"
 	"log"
+	"math/rand"
 	"os"
 	"regexp"
 	"strconv"
@@ -57,8 +58,9 @@ func compile_syscalls() {
 	bagpipe.ExecCommand(cmd, bagpipe.WorkingDirectory())
 }
 
-func link(bin string, i1 int, op1 string, i2 int, op2 string, dtype dtype_t) {
-	out_file := bin + "." + strconv.Itoa(i1) + "." + strconv.Itoa(i2)
+func link(bin string, i1 string, op1 string, i2 string, op2 string,
+	dtype dtype_t) {
+	out_file := bin + "." + i1 + "." + i2
 	bagpipe.UpdateStatus("building " + out_file + " ...")
 
 	if dtype == dtype_int {
@@ -85,10 +87,11 @@ func build(objects []string, operands []string, dtype dtype_t) {
 	for _, object := range objects {
 		for i1, op1 := range operands {
 			if dtype == dtype_mem {
-				link(object, i1, op1, 0, "0", dtype_mem)
+				link(object, strconv.Itoa(i1), op1, "0", "0", dtype_mem)
 			} else {
 				for i2, op2 := range operands {
-					link(object, i1, op1, i2, op2, dtype)
+					link(object, strconv.Itoa(i1), op1, strconv.Itoa(i2), op2,
+						dtype)
 				}
 			}
 		}
@@ -146,10 +149,10 @@ func contains(objects []string, object string) bool {
 	return false
 }
 
-func run(instr string, str_i1 string, str_i2 string, log_filename string,
-	emulator_dir string, emulator_bin string, plots_dir string) {
-	working_dir := bagpipe.WorkingDirectory()
+func exec(instr string, str_i1 string, str_i2 string, emulator_dir string,
+	emulator_bin string) string {
 
+	working_dir := bagpipe.WorkingDirectory()
 	exec_file := instr + "." + str_i1 + "." + str_i2
 
 	if bagpipe.FileExists(working_dir+"/"+exec_file) == false {
@@ -159,21 +162,32 @@ func run(instr string, str_i1 string, str_i2 string, log_filename string,
 	cmd := emulator_bin + " -s 0 -c " + working_dir + "/" + exec_file
 
 	bagpipe.UpdateStatus("running " + exec_file + " ... ")
-	output := bagpipe.ExecCommand(cmd, emulator_dir)
+	return bagpipe.ExecCommand(cmd, emulator_dir)
+}
 
+func parse(line string) (string, string) {
 	pattern := "instrs[\\s]*(\\d*)[\\s]*cycles[\\s]*(\\d*)"
 	regex := regexp.MustCompile(pattern)
 
-	if regex.MatchString(output) == false {
-		log.Fatal("could not parse output: \"" + output + "\"")
+	if regex.MatchString(line) == false {
+		log.Fatal("could not parse output: \"" + line + "\"")
 	}
 
-	match := regex.FindStringSubmatch(output)
+	match := regex.FindStringSubmatch(line)
 	instr_count := match[1]
 	cycle_count := match[2]
 
-	log_line := str_i1 + " " + str_i2 + " " + instr_count + " " + cycle_count
-	bagpipe.AppendFile(plots_dir+"/"+log_filename, log_line+"\n")
+	return instr_count, cycle_count
+}
+
+func run(instr string, str_i1 string, str_i2 string, log_filename string,
+	emulator_dir string, emulator_bin string, data_dir string) {
+
+	output := exec(instr, str_i1, str_i2, emulator_dir, emulator_bin)
+	instrs, cycles := parse(output)
+
+	log_line := str_i1 + " " + str_i2 + " " + instrs + " " + cycles
+	bagpipe.AppendFile(data_dir+"/"+log_filename, log_line+"\n")
 }
 
 func run_benchmark(arch string, instr string, operands []string,
@@ -189,11 +203,11 @@ func run_benchmark(arch string, instr string, operands []string,
 		emulator_dir = bagpipe.HomeDirectory() + "/src/boom-template/verisim"
 	}
 
-	plots_dir := bagpipe.WorkingDirectory() + "/../results/" + arch + "/data"
+	data_dir := bagpipe.WorkingDirectory() + "/../results/" + arch + "/data"
 
 	log_filename := "out." + instr
-	if bagpipe.FileExists(plots_dir + "/" + log_filename) {
-		bagpipe.DeleteFile(plots_dir + "/" + log_filename)
+	if bagpipe.FileExists(data_dir + "/" + log_filename) {
+		bagpipe.DeleteFile(data_dir + "/" + log_filename)
 	}
 
 	for i1, _ := range operands {
@@ -201,18 +215,126 @@ func run_benchmark(arch string, instr string, operands []string,
 
 		if dtype == dtype_mem {
 			run(instr, str_i1, "0", log_filename, emulator_dir, emulator_bin,
-				plots_dir)
+				data_dir)
 		} else {
 			for i2, _ := range operands {
 				str_i2 := strconv.Itoa(i2)
 				run(instr, str_i1, str_i2, log_filename, emulator_dir,
-					emulator_bin, plots_dir)
+					emulator_bin, data_dir)
 			}
 		}
 	}
 
-	bagpipe.UpdateStatus("test complete, results in " + arch + "/" +
-		log_filename + ".\n")
+	bagpipe.UpdateStatus("test complete, results in results/" + arch +
+		"/data/" + log_filename + ".\n")
+}
+
+func all_ones(bits int64) int64 {
+	return (1 << uint64(bits)) - 1
+}
+
+func rand_int(min int64, max int64) int64 {
+	return rand.Int63n(max-min) + min
+}
+
+func generate_subnormal_sp_operand() string {
+	random_subnormal := rand_int(1, all_ones(23))
+	return strconv.FormatInt(random_subnormal, 16)
+}
+
+func generate_subnormal_dp_operand() string {
+	random_subnormal := rand_int(1, all_ones(53))
+	return strconv.FormatInt(random_subnormal, 16)
+}
+
+func generate_normal_sp_operand() string {
+	random_subnormal := rand_int(1, all_ones(23))
+
+	exponent_mask := all_ones(8) << 23
+	random_normal := random_subnormal | exponent_mask
+
+	return strconv.FormatInt(random_normal, 16)
+}
+
+func generate_normal_dp_operand() string {
+	random_subnormal := rand_int(1, all_ones(53))
+
+	exponent_mask := all_ones(11) << 52
+	random_normal := random_subnormal | exponent_mask
+
+	return strconv.FormatInt(random_normal, 16)
+}
+
+func generate_operand(operand_type string, dtype dtype_t) string {
+	if operand_type == "n" {
+		if dtype == dtype_sp {
+			return generate_normal_sp_operand()
+		}
+
+		if dtype == dtype_dp {
+			return generate_normal_dp_operand()
+		}
+
+		log.Fatal("failed to recognize data type!")
+	}
+
+	if operand_type == "s" {
+		if dtype == dtype_sp {
+			return generate_subnormal_sp_operand()
+		}
+
+		if dtype == dtype_dp {
+			return generate_subnormal_dp_operand()
+		}
+
+		log.Fatal("failed to recognize data type!")
+	}
+
+	log.Fatal("failed to recognize operand type!")
+	return "0"
+}
+
+func rand_benchmark(arch string, opr1 string, opr2 string, instr string,
+	dtype dtype_t) {
+	var emulator_dir string
+	var emulator_bin string
+
+	if arch == "rock" {
+		emulator_bin = "./emulator-freechips.rocketchip.system-DefaultConfig"
+		emulator_dir = bagpipe.HomeDirectory() + "/src/rocket-chip/emulator"
+	} else if arch == "boom" {
+		emulator_bin = "./simulator-boom.system-BoomConfig"
+		emulator_dir = bagpipe.HomeDirectory() + "/src/boom-template/verisim"
+	}
+
+	data_dir := bagpipe.WorkingDirectory() + "/../results/" + arch + "/data"
+
+	log_filename := "out." + instr + "." + opr1 + "." + opr2
+	if bagpipe.FileExists(data_dir + "/" + log_filename) {
+		bagpipe.DeleteFile(data_dir + "/" + log_filename)
+	}
+
+	k_repeat_ctr := 10
+
+	assemble_crt()
+	compile_syscalls()
+
+	for opr1_ctr := 0; opr1_ctr < k_repeat_ctr; opr1_ctr += 1 {
+		left_operand := generate_operand(opr1, dtype)
+
+		for opr2_ctr := 0; opr2_ctr < k_repeat_ctr; opr2_ctr += 1 {
+			right_operand := generate_operand(opr2, dtype)
+
+			link(instr, opr1, left_operand, opr2, right_operand, dtype)
+			output := exec(instr, opr1, opr2, emulator_dir, emulator_bin)
+			_, cycles := parse(output)
+
+			log.Print(cycles)
+		}
+	}
+
+	bagpipe.UpdateStatus("test complete, results in results/" + arch +
+		"/data/" + log_filename + ".\n")
 }
 
 func main() {
@@ -274,12 +396,12 @@ func main() {
 				build(mem_objects, mem_operands, dtype_mem)
 			} else if strings.HasPrefix(cmd, "run-") {
 				arch := cmd[4:8]
+				instr := cmd[9:]
 
 				if arch != "rock" && arch != "boom" {
 					log.Fatal("did not recognize architecture.")
 				}
 
-				instr := cmd[9:]
 				if contains(int_objects, instr) {
 					run_benchmark(arch, instr, int_operands, dtype_int)
 				} else if contains(sp_objects, instr) {
@@ -290,6 +412,29 @@ func main() {
 					run_benchmark(arch, instr, mem_operands, dtype_mem)
 				} else {
 					log.Fatal(instr + " not found among instructions")
+				}
+			} else if strings.HasPrefix(cmd, "rand-") {
+				arch := cmd[5:9]
+				opr1 := cmd[10:11]
+				opr2 := cmd[12:13]
+				instr := cmd[14:]
+
+				if arch != "rock" && arch != "boom" {
+					log.Fatal("did not recognize architecture.")
+				}
+
+				if opr1 != "n" && opr1 != "s" {
+					log.Fatal("did not recognize first operand type.")
+				}
+
+				if opr2 != "n" && opr2 != "s" {
+					log.Fatal("did not recognize second operand type.")
+				}
+
+				if contains(sp_objects, instr) {
+					rand_benchmark(arch, opr1, opr2, instr, dtype_sp)
+				} else if contains(dp_objects, instr) {
+					rand_benchmark(arch, opr1, opr2, instr, dtype_dp)
 				}
 			}
 		}
