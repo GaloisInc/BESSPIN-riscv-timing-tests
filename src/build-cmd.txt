@@ -1,0 +1,1 @@
+riscv64-unknown-elf-gcc -I include -mcmodel=medany -std=gnu99 -O2 -static -nostartfiles -T test.ld -o test -DOP1=0 -DOP2=0 syscalls.c crt.S empty-driver.c
