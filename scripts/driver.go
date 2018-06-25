@@ -333,9 +333,10 @@ func rand_benchmark(arch string, opr1 string, opr2 string, instr string,
 			bagpipe.UpdateStatus("randomizing " + instr + " [" + status + "] ")
 
 			output := exec(instr, opr1, opr2, emulator_dir, emulator_bin)
+			instrs, cycles := parse(output)
 
-			_, cycles := parse(output)
-			bagpipe.AppendFile(data_dir+"/"+log_filename, cycles+"\n")
+			log_line := opr1 + " " + opr2 + " " + instrs + " " + cycles
+			bagpipe.AppendFile(data_dir+"/"+log_filename, log_line+"\n")
 		}
 	}
 
