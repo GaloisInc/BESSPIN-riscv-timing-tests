@@ -15,6 +15,7 @@ const (
 	dtype_int dtype_t = 0
 	dtype_sp  dtype_t = 1
 	dtype_dp  dtype_t = 2
+	dtype_mem dtype_t = 3
 )
 
 var CC = "riscv64-unknown-elf-gcc"
@@ -29,7 +30,13 @@ func compile_driver(inst string, op1 string, op2 string, driver_file string) {
 	cmd := CC + " " + CFLAGS + " -c " + driver_file + " -o driver.o -DINST=" +
 		inst + " -DOP1=0x" + op1 + " -DOP2=0x" + op2
 
-	bagpipe.ExecCommand(cmd, bagpipe.WorkingDirectory())
+	if len(inst) == 2 && (inst[:1] == "l" || inst[:1] == "s") {
+		bagpipe.ExecCommand(cmd+" -DPREFIX=x", bagpipe.WorkingDirectory())
+	} else if inst[:2] == "fl" || inst[:2] == "fs" {
+		bagpipe.ExecCommand(cmd+" -DPREFIX=f", bagpipe.WorkingDirectory())
+	} else {
+		bagpipe.ExecCommand(cmd, bagpipe.WorkingDirectory())
+	}
 }
 
 func assemble_crt() {
@@ -60,6 +67,8 @@ func link(bin string, i1 int, op1 string, i2 int, op2 string, dtype dtype_t) {
 		compile_driver(bin, op1, op2, "sp-driver.c")
 	} else if dtype == dtype_dp {
 		compile_driver(bin, op1, op2, "dp-driver.c")
+	} else if dtype == dtype_mem {
+		compile_driver(bin, op1, op2, "mem-driver.c")
 	} else {
 		log.Fatal("invalid data type")
 	}
@@ -75,24 +84,38 @@ func build(objects []string, operands []string, dtype dtype_t) {
 
 	for _, object := range objects {
 		for i1, op1 := range operands {
-			for i2, op2 := range operands {
-				link(object, i1, op1, i2, op2, dtype)
+			if dtype == dtype_mem {
+				link(object, i1, op1, 0, "0", dtype_mem)
+			} else {
+				for i2, op2 := range operands {
+					link(object, i1, op1, i2, op2, dtype)
+				}
 			}
 		}
 	}
+
+	bagpipe.ClearStatus()
 }
 
-func clean(objects []string, operands []string) {
+func clean(objects []string, operands []string, dtype dtype_t) {
 	bagpipe.UpdateStatus("cleaning ...")
 
 	for _, object := range objects {
 		for i1, _ := range operands {
-			for i2, _ := range operands {
-				out_file := object + "." + strconv.Itoa(i1) + "." +
-					strconv.Itoa(i2)
+			if dtype == dtype_mem {
+				out_file := object + "." + strconv.Itoa(i1) + ".0"
 
 				if bagpipe.FileExists(out_file) {
 					bagpipe.DeleteFile(out_file)
+				}
+			} else {
+				for i2, _ := range operands {
+					out_file := object + "." + strconv.Itoa(i1) + "." +
+						strconv.Itoa(i2)
+
+					if bagpipe.FileExists(out_file) {
+						bagpipe.DeleteFile(out_file)
+					}
 				}
 			}
 		}
@@ -153,7 +176,8 @@ func run(instr string, str_i1 string, str_i2 string, log_filename string,
 	bagpipe.AppendFile(plots_dir+"/"+log_filename, log_line+"\n")
 }
 
-func run_benchmark(arch string, instr string, operands []string) {
+func run_benchmark(arch string, instr string, operands []string,
+	dtype dtype_t) {
 	var emulator_dir string
 	var emulator_bin string
 
@@ -175,10 +199,15 @@ func run_benchmark(arch string, instr string, operands []string) {
 	for i1, _ := range operands {
 		str_i1 := strconv.Itoa(i1)
 
-		for i2, _ := range operands {
-			str_i2 := strconv.Itoa(i2)
-			run(instr, str_i1, str_i2, log_filename, emulator_dir, emulator_bin,
+		if dtype == dtype_mem {
+			run(instr, str_i1, "0", log_filename, emulator_dir, emulator_bin,
 				plots_dir)
+		} else {
+			for i2, _ := range operands {
+				str_i2 := strconv.Itoa(i2)
+				run(instr, str_i1, str_i2, log_filename, emulator_dir,
+					emulator_bin, plots_dir)
+			}
 		}
 	}
 
@@ -218,20 +247,31 @@ func main() {
 		"7ff0000000000000", "fff0000000000000", "7ff0000000000001",
 	}
 
+	mem_objects := []string{
+		"lb", "sb", "lh", "sh", "lw", "sw", "flw", "fsw", "fld", "fsd",
+	}
+
+	mem_operands := []string{
+		"0", "1", "2", "3", "4", "5", "6", "7", "8", "9",
+	}
+
 	if len(os.Args[1:]) == 0 {
 		build(int_objects, int_operands, dtype_int)
 	} else {
 		for _, cmd := range os.Args[1:] {
 			if cmd == "clean" {
-				clean(dp_objects, dp_operands)
-				clean(sp_objects, sp_operands)
-				clean(int_objects, int_operands)
+				clean(dp_objects, dp_operands, dtype_int)
+				clean(sp_objects, sp_operands, dtype_sp)
+				clean(int_objects, int_operands, dtype_dp)
+				clean(mem_objects, mem_operands, dtype_mem)
 			} else if cmd == "build-int" {
 				build(int_objects, int_operands, dtype_int)
 			} else if cmd == "build-sp" {
 				build(sp_objects, sp_operands, dtype_sp)
 			} else if cmd == "build-dp" {
 				build(dp_objects, dp_operands, dtype_dp)
+			} else if cmd == "build-mem" {
+				build(mem_objects, mem_operands, dtype_mem)
 			} else if strings.HasPrefix(cmd, "run-") {
 				arch := cmd[4:8]
 
@@ -241,11 +281,13 @@ func main() {
 
 				instr := cmd[9:]
 				if contains(int_objects, instr) {
-					run_benchmark(arch, instr, int_operands)
+					run_benchmark(arch, instr, int_operands, dtype_int)
 				} else if contains(sp_objects, instr) {
-					run_benchmark(arch, instr, sp_operands)
+					run_benchmark(arch, instr, sp_operands, dtype_sp)
 				} else if contains(dp_objects, instr) {
-					run_benchmark(arch, instr, dp_operands)
+					run_benchmark(arch, instr, dp_operands, dtype_dp)
+				} else if contains(mem_objects, instr) {
+					run_benchmark(arch, instr, mem_operands, dtype_mem)
 				} else {
 					log.Fatal(instr + " not found among instructions")
 				}
