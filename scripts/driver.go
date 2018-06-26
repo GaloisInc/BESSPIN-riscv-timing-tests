@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"gitlab.com/ashay/bagpipe"
 	"log"
 	"math/rand"
@@ -239,30 +240,41 @@ func rand_int(min int64, max int64) int64 {
 
 func generate_subnormal_sp_operand() string {
 	random_subnormal := rand_int(1, all_ones(23))
-	return strconv.FormatInt(random_subnormal, 16)
+	return fmt.Sprintf("%016x", random_subnormal)
 }
 
 func generate_subnormal_dp_operand() string {
 	random_subnormal := rand_int(1, all_ones(53))
-	return strconv.FormatInt(random_subnormal, 16)
+	return fmt.Sprintf("%016x", random_subnormal)
 }
 
 func generate_normal_sp_operand() string {
 	random_subnormal := rand_int(1, all_ones(23))
 
-	exponent_mask := all_ones(8) << 23
+	exponent_mask := rand_int(1, all_ones(8)) << 23
 	random_normal := random_subnormal | exponent_mask
 
-	return strconv.FormatInt(random_normal, 16)
+	return fmt.Sprintf("%016x", random_normal)
 }
 
 func generate_normal_dp_operand() string {
 	random_subnormal := rand_int(1, all_ones(53))
 
-	exponent_mask := all_ones(11) << 52
+	exponent_mask := rand_int(1, all_ones(11)) << 52
 	random_normal := random_subnormal | exponent_mask
 
-	return strconv.FormatInt(random_normal, 16)
+	return fmt.Sprintf("%016x", random_normal)
+}
+
+func generate_int_operand() string {
+	var word uint64
+	rand.Seed(time.Now().UTC().UnixNano())
+
+	for hamm_weight := 0; hamm_weight < rand.Intn(8); hamm_weight += 1 {
+		word |= (1 << uint64(rand.Intn(63))) // Don't set the sign bit.
+	}
+
+	return fmt.Sprintf("%016x", word)
 }
 
 func generate_operand(operand_type string, dtype dtype_t) string {
@@ -290,8 +302,12 @@ func generate_operand(operand_type string, dtype dtype_t) string {
 		log.Fatal("failed to recognize data type!")
 	}
 
+	if operand_type == "i" {
+		return generate_int_operand()
+	}
+
 	log.Fatal("failed to recognize operand type!")
-	return "0"
+	return fmt.Sprintf("%016x", 0)
 }
 
 func rand_benchmark(arch string, opr1 string, opr2 string, instr string,
