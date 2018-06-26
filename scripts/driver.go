@@ -9,6 +9,7 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"time"
 )
 
 type dtype_t int
@@ -457,27 +458,33 @@ func main() {
 					log.Fatal(instr + " not found among instructions")
 				}
 			} else if strings.HasPrefix(cmd, "rand-") {
-				arch := cmd[5:9]
-				opr1 := cmd[10:11]
-				opr2 := cmd[12:13]
-				instr := cmd[14:]
+				rand.Seed(time.Now().UTC().UnixNano())
+
+				fields := strings.Split(cmd, "-")
+				arch := fields[1]
 
 				if arch != "rock" && arch != "boom" {
 					log.Fatal("did not recognize architecture.")
 				}
 
-				if opr1 != "n" && opr1 != "s" {
-					log.Fatal("did not recognize first operand type.")
+				instr := fields[2]
+				opr1 := fields[3]
+				opr2 := fields[4]
+
+				if opr1 != "i" && opr1 != "n" && opr1 != "s" {
+					log.Fatal("did not recognize type of operand #1.")
 				}
 
-				if opr2 != "n" && opr2 != "s" {
-					log.Fatal("did not recognize second operand type.")
+				if opr2 != "i" && opr2 != "n" && opr2 != "s" {
+					log.Fatal("did not recognize type of operand #2.")
 				}
 
 				if contains(sp_objects, instr) {
 					rand_benchmark(arch, opr1, opr2, instr, dtype_sp)
 				} else if contains(dp_objects, instr) {
 					rand_benchmark(arch, opr1, opr2, instr, dtype_dp)
+				} else if contains(int_objects, instr) {
+					rand_benchmark(arch, opr1, opr2, instr, dtype_int)
 				}
 			}
 		}
