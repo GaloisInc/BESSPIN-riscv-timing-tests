@@ -45,12 +45,6 @@ This code measures the latency of various RISV instructions from the Base ISA an
     go run ../scripts/driver.go rand-rock-fdiv.d-s-n
     go run ../scripts/driver.go rand-rock-fdiv.d-s-s
     
-    # Validate prediction accuracy of the fdiv.s instruction.
-    go run ../scripts/fdiv.s-rocket-predict.go ../results/rock/data/out.fdiv.s.n.n
-    go run ../scripts/fdiv.s-rocket-predict.go ../results/rock/data/out.fdiv.s.n.s
-    go run ../scripts/fdiv.s-rocket-predict.go ../results/rock/data/out.fdiv.s.s.n
-    go run ../scripts/fdiv.s-rocket-predict.go ../results/rock/data/out.fdiv.s.s.s
-
     # Plot variations in instruction latencies (for all instructions)
     cd ../results/rock/plots
     R --no-save < ../../../scripts/plot.R
@@ -84,13 +78,19 @@ Plots for rocket chip are located [here](rocket-results.md).
 
 The latency from executing each of `div`, `divu`, `rem`, and `remu` instructions varies between 2 to 64 cycles, whereas the latency of `fdiv.s` instruction varies between 2 and 23 cycles.
 
-| instruction | mean error (in cycles) | stdev |
-| ----------- | ---------------------- | ----- |
-| `div`    | 1.40 | 1.82 |
-| `divu`   | 1.34 | 1.77 |
-| `rem`    | 1.55 | 1.90 |
-| `remu`   | 1.44 | 1.55 |
-| `fdiv.s` | 0.42 | 0.45 |
+The following table shows the mean and standard deviation of the observed error in cycle counts.
+
+| instruction           | mean | stdev | prediction |
+| --------------------- | ---- | ----- | ---------- |
+| `div`                 | 1.40 | 1.82  | [see code](scripts/divrem-rocket-predict.go) |
+| `divu`                | 1.34 | 1.77  | [see code](scripts/divrem-rocket-predict.go) |
+| `rem`                 | 1.55 | 1.90  | [see code](scripts/divrem-rocket-predict.go) |
+| `remu`                | 1.44 | 1.55  | [see code](scripts/divrem-rocket-predict.go) |
+| `fdiv.s`              | 0.42 | 0.45  | 23 cycles |
+| `fdiv.d` (norm, norm) | 0.48 | 0.32  | 50 cycles |
+| `fdiv.d` (norm, subn) | 0.62 | 0.69  | 50 cycles |
+| `fdiv.d` (subn, norm) | 0.62 | 0.67  | 50 cycles |
+| `fdiv.d` (subn, subn) | 0.42 | 0.45  | 53 cycles |
 
 
 ### BOOM
