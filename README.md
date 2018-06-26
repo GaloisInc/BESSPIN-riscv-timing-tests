@@ -80,17 +80,17 @@ The latency from executing each of `div`, `divu`, `rem`, and `remu` instructions
 
 The following table shows the mean and standard deviation of the observed error in cycle counts.
 
-| instruction           | mean | stdev | prediction |
-| --------------------- | ---- | ----- | ---------- |
-| `div`                 | 1.40 | 1.82  | [see code](scripts/divrem-rocket-predict.go) |
-| `divu`                | 1.34 | 1.77  | [see code](scripts/divrem-rocket-predict.go) |
-| `rem`                 | 1.55 | 1.90  | [see code](scripts/divrem-rocket-predict.go) |
-| `remu`                | 1.44 | 1.55  | [see code](scripts/divrem-rocket-predict.go) |
-| `fdiv.s`              | 0.42 | 0.45  | 23 cycles |
-| `fdiv.d` (norm, norm) | 0.48 | 0.32  | 50 cycles |
-| `fdiv.d` (norm, subn) | 0.62 | 0.69  | 50 cycles |
-| `fdiv.d` (subn, norm) | 0.62 | 0.67  | 50 cycles |
-| `fdiv.d` (subn, subn) | 0.42 | 0.45  | 53 cycles |
+| instruction           | mean err | stdev | prediction |
+| --------------------- | -------- | ----- | ---------- |
+| `div`                 | 1.40     | 1.82  | [see code](scripts/divrem-rocket-predict.go) |
+| `divu`                | 1.34     | 1.77  | [see code](scripts/divrem-rocket-predict.go) |
+| `rem`                 | 1.55     | 1.90  | [see code](scripts/divrem-rocket-predict.go) |
+| `remu`                | 1.44     | 1.55  | [see code](scripts/divrem-rocket-predict.go) |
+| `fdiv.s`              | 0.42     | 0.45  | 23 cycles |
+| `fdiv.d` (norm, norm) | 0.48     | 0.32  | 50 cycles |
+| `fdiv.d` (norm, subn) | 0.62     | 0.69  | 50 cycles |
+| `fdiv.d` (subn, norm) | 0.62     | 0.67  | 50 cycles |
+| `fdiv.d` (subn, subn) | 0.42     | 0.45  | 53 cycles |
 
 
 ### BOOM
