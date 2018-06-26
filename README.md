@@ -67,7 +67,7 @@ The following tables show the slowdown in instruction execution based on the cho
 Plots for rocket chip are located [here](rocket-results.md).
 
 |  **Instruction(s)** | **Slowdown** |
-| ------------------- | ------------ |
+| :------------------ | -----------: |
 | [`fdiv.d`](results/rock/plots/plot-fdiv.d.png) | 10.8x |
 | [`div`](results/rock/plots/plot-div.png), [`divu`](results/rock/plots/plot-divu.png), [`rem`](results/rock/plots/plot-rem.png), [`remu`](results/rock/plots/plot-remu.png) | 10.3x |
 | [`fdiv.s`](results/rock/plots/plot-fdiv.s.png) | 5.3x |
@@ -81,24 +81,21 @@ The latency from executing each of `div`, `divu`, `rem`, and `remu` instructions
 The following table shows the mean and standard deviation of the observed error in cycle counts.
 
 | **Instruction**       | **Mean err** | **stdev** | **Prediction** |
-| --------------------- | ------------ | --------- | -------------- |
+| :-------------------- | -----------: | --------: | -------------: |
 | `div`                 | 1.40         | 1.82      | [see code](scripts/divrem-rocket-predict.go) |
 | `divu`                | 1.34         | 1.77      | [see code](scripts/divrem-rocket-predict.go) |
 | `rem`                 | 1.55         | 1.90      | [see code](scripts/divrem-rocket-predict.go) |
 | `remu`                | 1.44         | 1.55      | [see code](scripts/divrem-rocket-predict.go) |
-| --------------------- | ------------ | --------- | -------------- |
 | `fdiv.s` (norm, norm) | 0.42         | 0.45      | 23 cycles      |
 | `fdiv.s` (norm, subn) | 0.40         | 0.45      | 23 cycles      |
 | `fdiv.s` (subn, norm) | 0.43         | 0.45      | 23 cycles      |
 | `fdiv.s` (subn, subn) | 0.44         | 0.45      | 23 cycles      |
 | `fdiv.s` (all others) |    -         |    -      |  2 cycles      |
-| --------------------- | ------------ | --------- | -------------- |
 | `fdiv.d` (norm, norm) | 0.48         | 0.32      | 50 cycles      |
 | `fdiv.d` (norm, subn) | 0.62         | 0.69      | 50 cycles      |
 | `fdiv.d` (subn, norm) | 0.62         | 0.67      | 50 cycles      |
 | `fdiv.d` (subn, subn) | 0.42         | 0.45      | 53 cycles      |
 | `fdiv.d` (all others) |    -         |    -      |  2 cycles      |
-| --------------------- | ------------ | --------- | -------------- |
 
 
 ### BOOM
@@ -106,6 +103,6 @@ The following table shows the mean and standard deviation of the observed error 
 Plots for boom chip are located [here](boom-results.md).
 
 | **Instruction(s)** | **Slowdown** |
-| ------------------ | ------------ |
+| :----------------- | -----------: |
 | [`div`](results/boom/plots/plot-div.png), [`divu`](results/boom/plots/plot-divu.png), [`rem`](results/boom/plots/plot-rem.png), [`remu`](results/boom/plots/plot-remu.png) | 6.1x |
 | [`fdiv.s`](results/boom/plots/plot-fdiv.s.png), [`fdiv.d`](results/boom/plots/plot-fdiv.d.png) | 3.3x |
