@@ -5861,3 +5861,7 @@ src/fdiv.d.n.n
 src/fdiv.d.n.s
 src/fdiv.d.s.n
 src/fdiv.d.s.s
+src/div.i.i
+src/divu.i.i
+src/rem.i.i
+src/remu.i.i
