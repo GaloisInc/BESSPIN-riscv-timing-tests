@@ -149,8 +149,8 @@ func clean(objects []string, operands []string, dtype dtype_t) {
 
 	aux_objects := []string{
 		"fdiv.s.n.n", "fdiv.s.n.s", "fdiv.s.s.n", "fdiv.s.s.s", "fdiv.d.n.n",
-		"fdiv.d.n.s", "fdiv.d.s.n", "fdiv.d.s.s", "crt.o", "driver.o",
-		"syscalls.o", "div.i.i", "divu.i.i", "rem.i.i", "remu.i.i",
+		"fdiv.d.n.s", "fdiv.d.s.n", "fdiv.d.s.s", "div.i.i", "divu.i.i",
+        "rem.i.i", "remu.i.i",
 	}
 
 	for _, object := range aux_objects {
