@@ -21,8 +21,31 @@ This code measures the latency of various RISV instructions from the Base ISA an
     go run ../scripts/driver.go run-rock-fdiv.s
     go run ../scripts/driver.go run-boom-add
     go run ../scripts/driver.go run-boom-div
+
+    # Randomize integer operands of div, divu, rem, and remu instructions.
+    go run ../scripts/driver.go rand-rock-div-i-i
+    go run ../scripts/driver.go rand-rock-divu-i-i
+    go run ../scripts/driver.go rand-rock-rem-i-i
+    go run ../scripts/driver.go rand-rock-remu-i-i
+
+    # Validate prediction accuracy of div, divu, rem, and remu instructions.
+    go run ../scripts/divrem-rocket-predict.go ../results/rock/data/out.div.i.i
+    go run ../scripts/divrem-rocket-predict.go ../results/rock/data/out.divu.i.i
+    go run ../scripts/divrem-rocket-predict.go ../results/rock/data/out.rem.i.i
+    go run ../scripts/divrem-rocket-predict.go ../results/rock/data/out.remu.i.i
+
+    # Randomize floating-point operands (pick from normal and subnormal values) of fdiv.s and fdiv.d instructions.
+    go run ../scripts/driver.go rand-rock-fdiv.s-n-n
+    go run ../scripts/driver.go rand-rock-fdiv.s-n-s
+    go run ../scripts/driver.go rand-rock-fdiv.s-s-n
+    go run ../scripts/driver.go rand-rock-fdiv.s-s-s
+
+    go run ../scripts/driver.go rand-rock-fdiv.d-n-n
+    go run ../scripts/driver.go rand-rock-fdiv.d-n-s
+    go run ../scripts/driver.go rand-rock-fdiv.d-s-n
+    go run ../scripts/driver.go rand-rock-fdiv.d-s-s
     
-    # Plot data (for all instructions)
+    # Plot variations in instruction latencies (for all instructions)
     cd ../results/rock/plots
     R --no-save < ../../../scripts/plot.R
 
@@ -49,6 +72,18 @@ Plots for rocket chip are located [here](rocket-results.md).
 | [`div`](results/rock/plots/plot-div.png), [`divu`](results/rock/plots/plot-divu.png), [`rem`](results/rock/plots/plot-rem.png), [`remu`](results/rock/plots/plot-remu.png) | 10.3x |
 | [`fdiv.s`](results/rock/plots/plot-fdiv.s.png) | 5.3x |
 | [`mul`](results/rock/plots/plot-mul.png) | 1.7x |
+
+
+#### Accuracy of Analytical Models of Timing
+
+The latency from executing each of `div`, `divu`, `rem`, and `remu` instructions varies between 2 to 64 cycles.
+
+| instruction | mean error (in cycles) | stdev |
+| ----------- | ---------------------- | ----- |
+| `div`  | 1.40 | 1.82 |
+| `divu` | 1.34 | 1.77 |
+| `rem`  | 1.55 | 1.90 |
+| `remu` | 1.44 | 1.55 |
 
 
 ### BOOM
