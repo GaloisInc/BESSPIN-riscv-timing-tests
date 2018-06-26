@@ -24,13 +24,17 @@ var CC = "riscv64-unknown-elf-gcc"
 var CFLAGS = "-I include -mcmodel=medany -std=gnu99 -O2"
 var LDFLAGS = "-static -nostartfiles -T test.ld"
 
-func compile_driver(inst string, op1 string, op2 string, driver_file string) {
+func compile_driver(inst string, op1 string, op2 string,
+	driver_file string) string {
+
 	if bagpipe.FileExists(driver_file) == false {
 		log.Fatal(driver_file + " not found")
 	}
 
-	cmd := CC + " " + CFLAGS + " -c " + driver_file + " -o driver.o -DINST=" +
-		inst + " -DOP1=0x" + op1 + " -DOP2=0x" + op2
+	obj_driver := bagpipe.CreateTempFile("driver.o.")
+
+	cmd := CC + " " + CFLAGS + " -c " + driver_file + " -o " + obj_driver +
+		" -DINST=" + inst + " -DOP1=0x" + op1 + " -DOP2=0x" + op2
 
 	if len(inst) == 2 && (inst[:1] == "l" || inst[:1] == "s") {
 		bagpipe.ExecCommand(cmd+" -DPREFIX=x", bagpipe.WorkingDirectory())
@@ -39,64 +43,81 @@ func compile_driver(inst string, op1 string, op2 string, driver_file string) {
 	} else {
 		bagpipe.ExecCommand(cmd, bagpipe.WorkingDirectory())
 	}
+
+	return obj_driver
 }
 
-func assemble_crt() {
+func assemble_crt() string {
 	if bagpipe.FileExists("crt.S") == false {
 		log.Fatal("crt.S not found")
 	}
 
-	cmd := CC + " " + CFLAGS + " -c crt.S -o crt.o"
+	obj_file := bagpipe.CreateTempFile("crt.o.")
+	cmd := CC + " " + CFLAGS + " -c crt.S -o " + obj_file
+
 	bagpipe.ExecCommand(cmd, bagpipe.WorkingDirectory())
+	return obj_file
 }
 
-func compile_syscalls() {
+func compile_syscalls() string {
 	if bagpipe.FileExists("syscalls.c") == false {
 		log.Fatal("syscalls.c not found")
 	}
 
-	cmd := CC + " " + CFLAGS + " -c syscalls.c -o syscalls.o"
+	obj_file := bagpipe.CreateTempFile("syscalls.o.")
+	cmd := CC + " " + CFLAGS + " -c syscalls.c -o " + obj_file
+
 	bagpipe.ExecCommand(cmd, bagpipe.WorkingDirectory())
+	return obj_file
 }
 
-func link(bin string, i1 string, op1 string, i2 string, op2 string,
-	dtype dtype_t) {
+func link(bin string, obj_crt string, obj_syscalls string, i1 string,
+	op1 string, i2 string, op2 string, dtype dtype_t) {
+
 	out_file := bin + "." + i1 + "." + i2
 	bagpipe.UpdateStatus("building " + out_file + " ...")
 
+	var obj_driver string
+
 	if dtype == dtype_int {
-		compile_driver(bin, op1, op2, "int-driver.c")
+		obj_driver = compile_driver(bin, op1, op2, "int-driver.c")
 	} else if dtype == dtype_sp {
-		compile_driver(bin, op1, op2, "sp-driver.c")
+		obj_driver = compile_driver(bin, op1, op2, "sp-driver.c")
 	} else if dtype == dtype_dp {
-		compile_driver(bin, op1, op2, "dp-driver.c")
+		obj_driver = compile_driver(bin, op1, op2, "dp-driver.c")
 	} else if dtype == dtype_mem {
-		compile_driver(bin, op1, op2, "mem-driver.c")
+		obj_driver = compile_driver(bin, op1, op2, "mem-driver.c")
 	} else {
 		log.Fatal("invalid data type")
 	}
 
-	cmd := CC + " driver.o crt.o syscalls.o -O2 " + LDFLAGS + " -o " + out_file
+	cmd := CC + " " + obj_driver + " " + obj_crt + " " + obj_syscalls +
+		" -O2 " + LDFLAGS + " -o " + out_file
 
 	bagpipe.ExecCommand(cmd, bagpipe.WorkingDirectory())
+	bagpipe.DeleteFile(obj_driver)
 }
 
 func build(objects []string, operands []string, dtype dtype_t) {
-	assemble_crt()
-	compile_syscalls()
+	obj_crt := assemble_crt()
+	obj_syscalls := compile_syscalls()
 
 	for _, object := range objects {
 		for i1, op1 := range operands {
 			if dtype == dtype_mem {
-				link(object, strconv.Itoa(i1), op1, "0", "0", dtype_mem)
+				link(object, obj_crt, obj_syscalls, strconv.Itoa(i1), op1, "0",
+					"0", dtype_mem)
 			} else {
 				for i2, op2 := range operands {
-					link(object, strconv.Itoa(i1), op1, strconv.Itoa(i2), op2,
-						dtype)
+					link(object, obj_crt, obj_syscalls, strconv.Itoa(i1), op1,
+						strconv.Itoa(i2), op2, dtype)
 				}
 			}
 		}
 	}
+
+	bagpipe.DeleteFile(obj_crt)
+	bagpipe.DeleteFile(obj_syscalls)
 
 	bagpipe.ClearStatus()
 }
@@ -330,31 +351,30 @@ func rand_benchmark(arch string, opr1 string, opr2 string, instr string,
 		bagpipe.DeleteFile(data_dir + "/" + log_filename)
 	}
 
-	k_repeat_ctr := 10
+	k_repeat_ctr := 200
 
-	assemble_crt()
-	compile_syscalls()
+	obj_crt := assemble_crt()
+	obj_syscalls := compile_syscalls()
 
-	for opr1_ctr := 0; opr1_ctr < k_repeat_ctr; opr1_ctr += 1 {
-		left_operand := generate_operand(opr1, dtype)
+	for ctr := 0; ctr < k_repeat_ctr; ctr += 1 {
+		left_opr := generate_operand(opr1, dtype)
+		right_opr := generate_operand(opr2, dtype)
 
-		for opr2_ctr := 0; opr2_ctr < k_repeat_ctr; opr2_ctr += 1 {
-			right_operand := generate_operand(opr2, dtype)
+		link(instr, obj_crt, obj_syscalls, opr1, left_opr, opr2, right_opr,
+			dtype)
 
-			link(instr, opr1, left_operand, opr2, right_operand, dtype)
+		status := strconv.Itoa(ctr+1) + " of " + strconv.Itoa(k_repeat_ctr)
+		bagpipe.UpdateStatus("randomizing " + instr + " [" + status + "] ... ")
 
-			complete := opr1_ctr*k_repeat_ctr + opr2_ctr
-			total := k_repeat_ctr * k_repeat_ctr
-			status := strconv.Itoa(complete+1) + " of " + strconv.Itoa(total)
-			bagpipe.UpdateStatus("randomizing " + instr + " [" + status + "] ")
+		output := exec(instr, opr1, opr2, emulator_dir, emulator_bin)
+		instrs, cycles := parse(output)
 
-			output := exec(instr, opr1, opr2, emulator_dir, emulator_bin)
-			instrs, cycles := parse(output)
-
-			log_line := opr1 + " " + opr2 + " " + instrs + " " + cycles
-			bagpipe.AppendFile(data_dir+"/"+log_filename, log_line+"\n")
-		}
+		log_line := left_opr + " " + right_opr + " " + instrs + " " + cycles
+		bagpipe.AppendFile(data_dir+"/"+log_filename, log_line+"\n")
 	}
+
+	bagpipe.DeleteFile(obj_crt)
+	bagpipe.DeleteFile(obj_syscalls)
 
 	bagpipe.UpdateStatus("test complete, results in results/" + arch +
 		"/data/" + log_filename + ".\n")
