@@ -5865,3 +5865,4 @@ src/div.i.i
 src/divu.i.i
 src/rem.i.i
 src/remu.i.i
+src/mul.i.i

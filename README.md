@@ -22,17 +22,19 @@ This code measures the latency of various RISV instructions from the Base ISA an
     go run ../scripts/driver.go run-boom-add
     go run ../scripts/driver.go run-boom-div
 
-    # Randomize integer operands of div, divu, rem, and remu instructions.
+    # Randomize integer operands of div, divu, rem, remu, and mul instructions.
     go run ../scripts/driver.go rand-rock-div-i-i
     go run ../scripts/driver.go rand-rock-divu-i-i
     go run ../scripts/driver.go rand-rock-rem-i-i
     go run ../scripts/driver.go rand-rock-remu-i-i
+    go run ../scripts/driver.go rand-rock-mul-i-i
 
-    # Validate prediction accuracy of div, divu, rem, and remu instructions.
+    # Validate prediction accuracy of div, divu, rem, remu, and mul instructions.
     go run ../scripts/divrem-rocket-predict.go ../results/rock/data/out.div.i.i
     go run ../scripts/divrem-rocket-predict.go ../results/rock/data/out.divu.i.i
     go run ../scripts/divrem-rocket-predict.go ../results/rock/data/out.rem.i.i
     go run ../scripts/divrem-rocket-predict.go ../results/rock/data/out.remu.i.i
+    go run ../scripts/mul-rocket-predict.go ../results/rock/data/out.mul.i.i
 
     # Randomize floating-point operands (pick from normal and subnormal values) of fdiv.s and fdiv.d instructions.
     go run ../scripts/driver.go rand-rock-fdiv.s-n-n
@@ -82,6 +84,7 @@ The following table shows the mean and standard deviation of the observed error 
 
 | **Instruction**       | **Mean err** | **stdev** | **Prediction** |
 | :-------------------- | -----------: | --------: | -------------: |
+| `mul`                 | 0.02         | 0.03      | [see code](scripts/mul-rocket-predict.go)    |
 | `div`                 | 1.40         | 1.82      | [see code](scripts/divrem-rocket-predict.go) |
 | `divu`                | 1.34         | 1.77      | [see code](scripts/divrem-rocket-predict.go) |
 | `rem`                 | 1.55         | 1.90      | [see code](scripts/divrem-rocket-predict.go) |
