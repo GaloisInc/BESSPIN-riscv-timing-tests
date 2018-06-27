@@ -17,27 +17,27 @@ const k_bit_range = 64
 func compute_latency(multiplicand uint64) float64 {
 	msb := k_bit_range - bits.LeadingZeros64(multiplicand)
 
-    if msb <= 16 {
-        return 2.27
-    }
+	if msb <= 16 {
+		return 2.27
+	}
 
-    if msb <= 24 {
-        return 2.90
-    }
+	if msb <= 24 {
+		return 2.90
+	}
 
-    if msb <= 32 {
-        return 3.81
-    }
+	if msb <= 32 {
+		return 3.81
+	}
 
-    if msb <= 40 {
-        return 4.72
-    }
+	if msb <= 40 {
+		return 4.72
+	}
 
-    if msb <= 48 {
-        return 5.63
-    }
+	if msb <= 48 {
+		return 5.63
+	}
 
-    return 6.54
+	return 6.54
 }
 
 func sum(numbers []float64) (total float64) {
