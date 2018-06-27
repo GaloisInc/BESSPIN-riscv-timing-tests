@@ -84,11 +84,11 @@ The following table shows the mean and standard deviation of the observed error 
 
 | **Instruction**       | **Mean err** | **stdev** | **Prediction** |
 | :-------------------- | -----------: | --------: | -------------: |
-| `mul`                 | 0.02         | 0.03      | [see code](scripts/mul-rocket-predict.go)    |
-| `div`                 | 1.40         | 1.82      | [see code](scripts/divrem-rocket-predict.go) |
-| `divu`                | 1.34         | 1.77      | [see code](scripts/divrem-rocket-predict.go) |
-| `rem`                 | 1.55         | 1.90      | [see code](scripts/divrem-rocket-predict.go) |
-| `remu`                | 1.44         | 1.55      | [see code](scripts/divrem-rocket-predict.go) |
+| `mul`                 | 0.02         | 0.03      | [see `mul` code](scripts/mul-rocket-predict.go)    |
+| `div`                 | 1.40         | 1.82      | [see `div` code](scripts/divrem-rocket-predict.go) |
+| `divu`                | 1.34         | 1.77      | [see `div` code](scripts/divrem-rocket-predict.go) |
+| `rem`                 | 1.55         | 1.90      | [see `div` code](scripts/divrem-rocket-predict.go) |
+| `remu`                | 1.44         | 1.55      | [see `div` code](scripts/divrem-rocket-predict.go) |
 | `fdiv.s` (norm, norm) | 0.42         | 0.45      | 23 cycles      |
 | `fdiv.s` (norm, subn) | 0.40         | 0.45      | 23 cycles      |
 | `fdiv.s` (subn, norm) | 0.43         | 0.45      | 23 cycles      |
