@@ -11,7 +11,7 @@ import (
 	"strings"
 )
 
-type point_t struct {
+type record_t struct {
 	left_operand  uint64
 	right_operand uint64
 	instr_count   uint64
@@ -24,8 +24,18 @@ type value_range_t struct {
 	latency     uint64
 }
 
-func parse_lines(lines []string) []point_t {
-	var points []point_t
+type point_t struct {
+	x float64
+	y float64
+}
+
+type line_t struct {
+	start point_t
+	end   point_t
+}
+
+func parse_lines(lines []string) []record_t {
+	var records []record_t
 
 	for _, line := range lines {
 		if len(line) == 0 {
@@ -46,125 +56,144 @@ func parse_lines(lines []string) []point_t {
 		field4, err := strconv.ParseUint(fields[3], 10, 64)
 		bagpipe.CheckError(err)
 
-		points = append(points, point_t{field1, field2, field3, field4})
+		records = append(records, record_t{field1, field2, field3, field4})
 	}
 
-	return points
+	return records
 }
 
-func trim_points(points []point_t) []point_t {
-	var new_points []point_t
-	new_points = append(new_points, points[0])
+func remove_duplicates(records []record_t) []record_t {
+	var new_records []record_t
+	new_records = append(new_records, records[0])
 
-	for idx := 1; idx < len(points); idx += 1 {
-		prev_point := points[idx-1]
-		curr_point := points[idx]
+	for idx := 1; idx < len(records); idx += 1 {
+		prev_record := records[idx-1]
+		curr_record := records[idx]
 
-		if curr_point.cycle_count != prev_point.cycle_count {
-			new_points = append(new_points, curr_point)
+		if curr_record.left_operand != prev_record.left_operand ||
+			curr_record.right_operand != prev_record.right_operand {
+			new_records = append(new_records, curr_record)
 		}
 	}
 
-	return new_points
+	return new_records
 }
 
-func perpendicular_distance(start_x uint64, start_y uint64, end_x uint64,
-	end_y uint64, point_x uint64, point_y uint64) float64 {
-
-	diff_y := end_y - start_y
-	diff_x := end_x - start_x
-	diff := diff_y*point_x - diff_x*point_y
-	numerator := math.Abs(float64(diff + end_x*start_y - start_x*end_y))
-
-	sq_diff_y := (end_y - start_y) * (end_y - start_y)
-	sq_diff_x := (end_x - start_x) * (end_x - start_x)
-	denominator := math.Sqrt(float64(sq_diff_y + sq_diff_x))
-
-	return numerator / denominator
+func point_distance(start point_t, end point_t) float64 {
+	diff := point_t{start.x - end.x, start.y - end.y}
+	return math.Sqrt(diff.x*diff.x + diff.y - diff.y)
 }
 
-func refine_points(points []point_t) []point_t {
-	start_point := points[0]
-	end_point := points[len(points)-1]
+func line_distance(line line_t, point point_t) float64 {
+	end := line.end
+	start := line.start
 
-	start_x := start_point.left_operand
-	start_y := start_point.cycle_count
+	line_angle := math.Atan2(start.y-end.y, start.x-end.x)
+	if line_angle > math.Pi/2 {
+		line_angle = math.Pi - line_angle
+	}
 
-	end_x := end_point.left_operand
-	end_y := end_point.cycle_count
+	point_angle := math.Atan2(start.y-point.y, start.x-point.x)
+	if point_angle > math.Pi/2 {
+		point_angle = math.Pi - point_angle
+	}
 
-	farthest_point := 0
+	return math.Abs(line_angle-point_angle) * point_distance(start, point)
+}
+
+func find_inflection_records(records []record_t) []record_t {
+	last_idx := len(records) - 1
+
+	if last_idx == 0 {
+		return records
+	}
+
+	start_x := float64(records[0].left_operand)
+	start_y := float64(records[0].cycle_count)
+	start_point := point_t{start_x, start_y}
+
+	end_x := float64(records[last_idx].left_operand)
+	end_y := float64(records[last_idx].cycle_count)
+	end_point := point_t{end_x, end_y}
+
+	line := line_t{start_point, end_point}
+
 	max_distance := 0.0
+	farthest_record := 0
 
-	const k_threshold_distance = 0.01
-
-	for idx := 1; idx < len(points)-1; idx += 1 {
-		point := points[idx]
-		point_x := point.left_operand
-		point_y := point.cycle_count
-
-		point_distance := perpendicular_distance(start_x, start_y, end_x,
-			end_y, point_x, point_y)
+	for idx := 1; idx < len(records)-1; idx += 1 {
+		point_x := float64(records[idx].left_operand)
+		point_y := float64(records[idx].cycle_count)
+		point_distance := line_distance(line, point_t{point_x, point_y})
 
 		if point_distance > max_distance {
-			farthest_point = idx
+			farthest_record = idx
 			max_distance = point_distance
 		}
 	}
 
+	const k_threshold_distance = 5
+
 	if max_distance <= k_threshold_distance {
-		return []point_t{start_point, end_point}
+		return []record_t{records[0], records[last_idx]}
 	}
 
 	// refine everything from 0 to idx (inclusive).
-	left_points := refine_points(points[:farthest_point+1])
+	left_records := find_inflection_records(records[:farthest_record+1])
 
 	// refine everything from idx to len-1 (inclusive).
-	right_points := refine_points(points[farthest_point:])
+	right_records := find_inflection_records(records[farthest_record:])
 
-	// don't include the farthest point twice.
-	return append(left_points, right_points[1:]...)
+	// don't include the farthest record twice.
+	return append(left_records, right_records[1:]...)
 }
 
-func infer_single_dimension_ranges(filename string) []value_range_t {
+func read_records(filename string) []record_t {
 	contents := bagpipe.ReadFile(filename)
 	lines := strings.Split(contents, "\n")
-	points := parse_lines(lines)
+	records := parse_lines(lines)
 
-	sort.Slice(points, func(i, j int) bool {
-		if points[i].cycle_count < points[j].cycle_count {
+	sort.Slice(records, func(i, j int) bool {
+		if records[i].cycle_count < records[j].cycle_count {
 			return true
 		}
 
-		if points[i].cycle_count == points[j].cycle_count &&
-			points[i].left_operand < points[j].left_operand {
+		if records[i].cycle_count == records[j].cycle_count &&
+			records[i].left_operand < records[j].left_operand {
 			return true
 		}
 
-		if points[i].cycle_count == points[j].cycle_count &&
-			points[i].left_operand == points[j].left_operand &&
-			points[i].right_operand < points[j].right_operand {
+		if records[i].cycle_count == records[j].cycle_count &&
+			records[i].left_operand == records[j].left_operand &&
+			records[i].right_operand < records[j].right_operand {
 			return true
 		}
 
 		return false
 	})
 
-	trimmed_points := trim_points(points)
-	refined_points := refine_points(trimmed_points)
+	return records
+}
 
-	var value_range value_range_t
+func infer_single_dimension_ranges(filename string) []value_range_t {
+	records := read_records(filename)
+	unique_records := remove_duplicates(records)
+	inflection_records := find_inflection_records(unique_records)
+
 	var value_ranges []value_range_t
+	var value_range value_range_t
 
-	value_range.latency = refined_points[0].cycle_count
-	value_range.start_value = refined_points[0].left_operand
+	value_range.start_value = 0
+	value_range.latency = inflection_records[0].cycle_count
 
-	for idx := 1; idx < len(refined_points); idx += 1 {
-		value_range.end_value = refined_points[idx].left_operand - 1
-		value_ranges = append(value_ranges, value_range)
+	for idx := 0; idx < len(inflection_records); idx += 1 {
+		if inflection_records[idx].cycle_count != value_range.latency {
+			value_range.end_value = inflection_records[idx].left_operand - 1
+			value_ranges = append(value_ranges, value_range)
 
-		value_range.latency = refined_points[idx].cycle_count
-		value_range.start_value = refined_points[idx].left_operand
+			value_range.latency = inflection_records[idx].cycle_count
+			value_range.start_value = inflection_records[idx].left_operand
+		}
 	}
 
 	value_range.end_value = 0xffffffffffffffff
