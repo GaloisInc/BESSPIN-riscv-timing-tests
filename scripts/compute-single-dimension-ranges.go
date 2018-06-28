@@ -81,7 +81,7 @@ func remove_duplicates(records []record_t) []record_t {
 
 func point_distance(start point_t, end point_t) float64 {
 	diff := point_t{start.x - end.x, start.y - end.y}
-	return math.Sqrt(diff.x*diff.x + diff.y - diff.y)
+	return math.Sqrt(diff.x*diff.x + diff.y*diff.y)
 }
 
 func line_distance(line line_t, point point_t) float64 {
