@@ -36,6 +36,9 @@ This code measures the latency of various RISV instructions from the Base ISA an
     go run ../scripts/divrem-rocket-predict.go ../results/rock/data/out.remu.i.i
     go run ../scripts/mul-rocket-predict.go ../results/rock/data/out.mul.i.i
 
+    # Compute the range of values and latencies for the mul instruction.
+    go run compute-single-dimension-ranges.go ../results/rock/data/out.mul.i.i                                                                                                                                  riscv-timing-tests/scripts
+
     # Randomize floating-point operands (pick from normal and subnormal values) of fdiv.s and fdiv.d instructions.
     go run ../scripts/driver.go rand-rock-fdiv.s-n-n
     go run ../scripts/driver.go rand-rock-fdiv.s-n-s
