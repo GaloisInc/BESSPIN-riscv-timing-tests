@@ -353,7 +353,7 @@ func rand_benchmark(arch string, opr1 string, opr2 string, instr string,
 		bagpipe.DeleteFile(data_dir + "/" + log_filename)
 	}
 
-	k_repeat_ctr := 200
+	k_repeat_ctr := 1000
 
 	obj_crt := assemble_crt()
 	obj_syscalls := compile_syscalls()
