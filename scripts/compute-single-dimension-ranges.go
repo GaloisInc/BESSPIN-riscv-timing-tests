@@ -27,6 +27,7 @@ type value_range_t struct {
 type point_t struct {
 	x float64
 	y float64
+	z float64
 }
 
 type line_t struct {
@@ -80,20 +81,21 @@ func remove_duplicates(records []record_t) []record_t {
 }
 
 func point_distance(start point_t, end point_t) float64 {
-	diff := point_t{start.x - end.x, start.y - end.y}
-	return math.Sqrt(diff.x*diff.x + diff.y*diff.y)
+	diff := point_t{start.x - end.x, start.y - end.y, start.z - end.z}
+	return math.Sqrt(diff.x*diff.x + diff.y*diff.y + diff.z*diff.z)
 }
 
+// FIXME: Convert to three dimensional space.
 func line_distance(line line_t, point point_t) float64 {
 	end := line.end
 	start := line.start
 
-	line_angle := math.Atan2(start.y-end.y, start.x-end.x)
+	line_angle := math.Atan2(start.z-end.z, start.x-end.x)
 	if line_angle > math.Pi/2 {
 		line_angle = math.Pi - line_angle
 	}
 
-	point_angle := math.Atan2(start.y-point.y, start.x-point.x)
+	point_angle := math.Atan2(start.z-point.z, start.x-point.x)
 	if point_angle > math.Pi/2 {
 		point_angle = math.Pi - point_angle
 	}
@@ -109,12 +111,14 @@ func find_inflection_records(records []record_t) []record_t {
 	}
 
 	start_x := float64(records[0].left_operand)
-	start_y := float64(records[0].cycle_count)
-	start_point := point_t{start_x, start_y}
+	start_y := float64(records[0].right_operand)
+	start_z := float64(records[0].cycle_count)
+	start_point := point_t{start_x, start_y, start_z}
 
 	end_x := float64(records[last_idx].left_operand)
-	end_y := float64(records[last_idx].cycle_count)
-	end_point := point_t{end_x, end_y}
+	end_y := float64(records[last_idx].right_operand)
+	end_z := float64(records[last_idx].cycle_count)
+	end_point := point_t{end_x, end_y, end_z}
 
 	line := line_t{start_point, end_point}
 
@@ -123,8 +127,11 @@ func find_inflection_records(records []record_t) []record_t {
 
 	for idx := 1; idx < len(records)-1; idx += 1 {
 		point_x := float64(records[idx].left_operand)
-		point_y := float64(records[idx].cycle_count)
-		point_distance := line_distance(line, point_t{point_x, point_y})
+		point_y := float64(records[idx].right_operand)
+		point_z := float64(records[idx].cycle_count)
+
+		point := point_t{point_x, point_y, point_z}
+		point_distance := line_distance(line, point)
 
 		if point_distance > max_distance {
 			farthest_record = idx
@@ -154,17 +161,11 @@ func read_records(filename string) []record_t {
 	records := parse_lines(lines)
 
 	sort.Slice(records, func(i, j int) bool {
-		if records[i].cycle_count < records[j].cycle_count {
+		if records[i].left_operand < records[j].left_operand {
 			return true
 		}
 
-		if records[i].cycle_count == records[j].cycle_count &&
-			records[i].left_operand < records[j].left_operand {
-			return true
-		}
-
-		if records[i].cycle_count == records[j].cycle_count &&
-			records[i].left_operand == records[j].left_operand &&
+		if records[i].left_operand == records[j].left_operand &&
 			records[i].right_operand < records[j].right_operand {
 			return true
 		}
