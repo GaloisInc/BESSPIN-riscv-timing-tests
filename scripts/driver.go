@@ -117,8 +117,8 @@ func build(objects []string, operands []string, dtype dtype_t) {
 		}
 	}
 
-	bagpipe.DeleteFile(obj_crt)
 	bagpipe.DeleteFile(obj_syscalls)
+	bagpipe.DeleteFile(obj_crt)
 
 	bagpipe.ClearStatus()
 }
@@ -143,19 +143,29 @@ func clean(objects []string, operands []string, dtype dtype_t) {
 						bagpipe.DeleteFile(out_file)
 					}
 				}
+
+				if dtype == dtype_int {
+					if bagpipe.FileExists(object + ".i.i") {
+						bagpipe.DeleteFile(object + ".i.i")
+					}
+				} else if dtype == dtype_sp || dtype == dtype_dp {
+					if bagpipe.FileExists(object + ".n.n") {
+						bagpipe.DeleteFile(object + ".n.n")
+					}
+
+					if bagpipe.FileExists(object + ".n.s") {
+						bagpipe.DeleteFile(object + ".n.s")
+					}
+
+					if bagpipe.FileExists(object + ".s.n") {
+						bagpipe.DeleteFile(object + ".s.n")
+					}
+
+					if bagpipe.FileExists(object + ".s.s") {
+						bagpipe.DeleteFile(object + ".s.s")
+					}
+				}
 			}
-		}
-	}
-
-	aux_objects := []string{
-		"fdiv.s.n.n", "fdiv.s.n.s", "fdiv.s.s.n", "fdiv.s.s.s", "fdiv.d.n.n",
-		"fdiv.d.n.s", "fdiv.d.s.n", "fdiv.d.s.s", "div.i.i", "divu.i.i",
-		"rem.i.i", "remu.i.i",
-	}
-
-	for _, object := range aux_objects {
-		if bagpipe.FileExists(object) {
-			bagpipe.DeleteFile(object)
 		}
 	}
 
@@ -187,7 +197,7 @@ func exec(instr string, str_i1 string, str_i2 string, emulator_dir string,
 }
 
 func parse(line string) (string, string) {
-	pattern := "instrs[\\s]*(\\d*)[\\s]*cycles[\\s]*(\\d*)"
+	pattern := "instrs[\\s]*([0-9a-f]*)[\\s]*cycles[\\s]*([0-9a-f]*)"
 	regex := regexp.MustCompile(pattern)
 
 	if regex.MatchString(line) == false {
@@ -195,8 +205,16 @@ func parse(line string) (string, string) {
 	}
 
 	match := regex.FindStringSubmatch(line)
-	instr_count := match[1]
-	cycle_count := match[2]
+	i_instr_count, err := strconv.ParseUint(match[1], 16, 64)
+	bagpipe.CheckError(err)
+
+	i_cycle_count, err := strconv.ParseUint(match[2], 16, 64)
+	bagpipe.CheckError(err)
+
+	f_cycle_count := float64(i_cycle_count) / float64(i_instr_count)
+
+	instr_count := strconv.FormatUint(i_instr_count, 16)
+	cycle_count := strconv.FormatFloat(f_cycle_count, 'f', 2, 64)
 
 	return instr_count, cycle_count
 }
@@ -359,11 +377,10 @@ func rand_benchmark(arch string, opr1 string, opr2 string, instr string,
 	obj_syscalls := compile_syscalls()
 
 	for ctr := 0; ctr < k_repeat_ctr; ctr += 1 {
-		left_opr := generate_operand(opr1, dtype)
-		right_opr := generate_operand(opr2, dtype)
+		left_op := generate_operand(opr1, dtype)
+		right_op := generate_operand(opr2, dtype)
 
-		link(instr, obj_crt, obj_syscalls, opr1, left_opr, opr2, right_opr,
-			dtype)
+		link(instr, obj_crt, obj_syscalls, opr1, left_op, opr2, right_op, dtype)
 
 		status := strconv.Itoa(ctr+1) + " of " + strconv.Itoa(k_repeat_ctr)
 		bagpipe.UpdateStatus("randomizing " + instr + " [" + status + "] ... ")
@@ -371,12 +388,12 @@ func rand_benchmark(arch string, opr1 string, opr2 string, instr string,
 		output := exec(instr, opr1, opr2, emulator_dir, emulator_bin)
 		instrs, cycles := parse(output)
 
-		log_line := left_opr + " " + right_opr + " " + instrs + " " + cycles
+		log_line := left_op + " " + right_op + " " + instrs + " " + cycles
 		bagpipe.AppendFile(data_dir+"/"+log_filename, log_line+"\n")
 	}
 
-	bagpipe.DeleteFile(obj_crt)
 	bagpipe.DeleteFile(obj_syscalls)
+	bagpipe.DeleteFile(obj_crt)
 
 	bagpipe.UpdateStatus("test complete, results in results/" + arch +
 		"/data/" + log_filename + ".\n")
@@ -427,9 +444,9 @@ func main() {
 	} else {
 		for _, cmd := range os.Args[1:] {
 			if cmd == "clean" {
-				clean(dp_objects, dp_operands, dtype_int)
 				clean(sp_objects, sp_operands, dtype_sp)
-				clean(int_objects, int_operands, dtype_dp)
+				clean(dp_objects, dp_operands, dtype_dp)
+				clean(int_objects, int_operands, dtype_int)
 				clean(mem_objects, mem_operands, dtype_mem)
 			} else if cmd == "build-int" {
 				build(int_objects, int_operands, dtype_int)
