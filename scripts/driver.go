@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"encoding/gob"
+	"flag"
 	"fmt"
 	"gitlab.com/ashay/bagpipe"
 	"log"
@@ -29,6 +30,12 @@ const (
 var CC = "riscv64-unknown-elf-gcc"
 var CFLAGS = "-I include -mcmodel=medany -std=gnu99 -O2"
 var LDFLAGS = "-static -nostartfiles -T test.ld"
+
+var BOOM_DIR = bagpipe.HomeDirectory() + "/src/boom-template/verisim"
+var BOOM_BIN = "./simulator-boom.system-BoomConfig"
+
+var ROCKET_DIR = bagpipe.HomeDirectory() + "/src/rocket-chip/emulator"
+var ROCKET_BIN = "./emulator-freechips.rocketchip.system-DefaultConfig"
 
 var int_objects = []string{
 	"sll", "srl", "sra", "add", "sub", "xor", "and", "or", "slt", "sltu",
@@ -323,42 +330,59 @@ func decode_output(output bytes.Buffer) output_t {
 	return value
 }
 
-func rand_benchmark(arch string, opr1 string, opr2 string, instr string) {
-	var emulator_dir string
-	var emulator_bin string
+func get_emulator_dir(arch string) string {
+	switch arch {
+	case "rocket":
+		return ROCKET_DIR
 
-	if arch == "rock" {
-		emulator_bin = "./emulator-freechips.rocketchip.system-DefaultConfig"
-		emulator_dir = bagpipe.HomeDirectory() + "/src/rocket-chip/emulator"
-	} else if arch == "boom" {
-		emulator_bin = "./simulator-boom.system-BoomConfig"
-		emulator_dir = bagpipe.HomeDirectory() + "/src/boom-template/verisim"
+	case "boom":
+		return BOOM_DIR
 	}
 
+	return "--unknown--"
+}
+
+func get_emulator_bin(arch string) string {
+	switch arch {
+	case "rocket":
+		return ROCKET_BIN
+
+	case "boom":
+		return BOOM_BIN
+	}
+
+	return "--unknown--"
+}
+
+func sweep_instr_operands(arch string, op1 string, op2 string, instr string) {
+	emulator_dir := get_emulator_dir(arch)
+	emulator_bin := get_emulator_bin(arch)
 	data_dir := bagpipe.WorkingDirectory() + "/../results/" + arch + "/data"
 
-	log_filename := "out." + instr + "." + opr1 + "." + opr2
+	log_filename := "out." + instr + "." + op1 + "." + op2
 	if bagpipe.FileExists(data_dir + "/" + log_filename) {
 		bagpipe.DeleteFile(data_dir + "/" + log_filename)
 	}
 
+	rand.Seed(time.Now().UTC().UnixNano())
 	operands := generate_int_operands()
+
 	test_count := len(operands) * len(operands)
 	sprinter := bagpipe.NewSprinter(exec_one, 24, test_count)
 
 	for idx1, operand1 := range operands {
-		s_opr1 := fmt.Sprintf("%016x", operand1)
+		s_op1 := fmt.Sprintf("%016x", operand1)
 
 		for idx2, operand2 := range operands {
-			s_opr2 := fmt.Sprintf("%016x", operand2)
+			s_op2 := fmt.Sprintf("%016x", operand2)
 
 			idx := idx1*len(operands) + idx2
 			status := fmt.Sprintf("%4d of %4d", idx, test_count)
 
-			bagpipe.UpdateStatus("randomizing " + instr + " [" + status +
+			bagpipe.UpdateStatus("testing " + instr + " [" + status +
 				" ] ... ")
 
-			input := input_t{Instr: instr, Left_op: s_opr1, Right_op: s_opr2,
+			input := input_t{Instr: instr, Left_op: s_op1, Right_op: s_op2,
 				Emulator_dir: emulator_dir, Emulator_bin: emulator_bin}
 
 			sprinter.FeedWorker(input)
@@ -401,8 +425,8 @@ func generate_int_operands() []uint64 {
 	return operand_list
 }
 
-func test_prediction() {
-	file_contents := bagpipe.ReadFile("pred.out")
+func test_prediction(arch string, instr string, pred_file string) {
+	file_contents := bagpipe.ReadFile(pred_file)
 	lines := strings.Split(file_contents, "\n")
 
 	type exp_t struct {
@@ -429,18 +453,19 @@ func test_prediction() {
 		}
 	}
 
-	emulator_bin := "./emulator-freechips.rocketchip.system-DefaultConfig"
-	emulator_dir := bagpipe.HomeDirectory() + "/src/rocket-chip/emulator"
+	emulator_dir := get_emulator_dir(arch)
+	emulator_bin := get_emulator_bin(arch)
 
 	sprinter := bagpipe.NewSprinter(exec_one, 48, len(lines)-1)
 
 	for idx, exp := range exps {
 		status := fmt.Sprintf("%4d of %4d", idx, len(exps))
-		bagpipe.UpdateStatus("randomizing div [ " + status + " ] ... ")
+		bagpipe.UpdateStatus("testing pred for " + instr + " [ " + status +
+			" ] ... ")
 
 		s_predicted := strconv.FormatFloat(exp.predicted_value, 'f', 2, 64)
 
-		input := input_t{Instr: "div", Left_op: exp.x_value,
+		input := input_t{Instr: instr, Left_op: exp.x_value,
 			Right_op: exp.y_value, Emulator_dir: emulator_dir,
 			Emulator_bin: emulator_bin, Aux_field: s_predicted}
 
@@ -464,6 +489,10 @@ func test_prediction() {
 		diffs = append(diffs, math.Abs(actual-predicted))
 	}
 
+	print_prediction_stats(diffs)
+}
+
+func print_prediction_stats(diffs []float64) {
 	sort.Slice(diffs, func(i, j int) bool {
 		if diffs[i] < diffs[j] {
 			return true
@@ -483,44 +512,111 @@ func test_prediction() {
 	bagpipe.UpdateStatus(status)
 }
 
+func is_valid_instr(instr string) bool {
+	return contains(sp_objects, instr) || contains(dp_objects, instr) ||
+		contains(int_objects, instr)
+}
+
+func is_valid_arch(arch string) bool {
+	return arch == "rocket" || arch == "boom"
+}
+
+func is_valid_operand_type(operand_type string) bool {
+	return operand_type == "integer" || operand_type == "normal" ||
+		operand_type == "subnormal"
+}
+
 func main() {
-	for _, cmd := range os.Args[1:] {
-		if cmd == "clean" {
-			clean(sp_objects, dtype_sp)
-			clean(dp_objects, dtype_dp)
-			clean(int_objects, dtype_int)
-			clean(mem_objects, dtype_mem)
-		} else if strings.HasPrefix(cmd, "rand-") {
-			rand.Seed(time.Now().UTC().UnixNano())
+	flag.Parse()
 
-			fields := strings.Split(cmd, "-")
-			arch := fields[1]
+	clean_cmd := flag.NewFlagSet("clean", flag.ExitOnError)
+	sweep_cmd := flag.NewFlagSet("sweep", flag.ExitOnError)
+	validate_cmd := flag.NewFlagSet("validate", flag.ExitOnError)
 
-			if arch != "rock" && arch != "boom" {
-				log.Fatal("did not recognize architecture.")
-			}
+	sweep_instr := sweep_cmd.String("instr", "",
+		"`instruction` to test (required)")
 
-			instr := fields[2]
-			opr1 := fields[3]
-			opr2 := fields[4]
+	sweep_arch := sweep_cmd.String("arch", "rocket",
+		"`architecture` (rocket or boom)")
 
-			if opr1 != "i" && opr1 != "n" && opr1 != "s" {
-				log.Fatal("did not recognize type of operand #1.")
-			}
+	sweep_op1 := sweep_cmd.String("operand1-type", "integer",
+		"`type` of the first operand to the instruction "+
+			"(integer / normal / subnormal)")
 
-			if opr2 != "i" && opr2 != "n" && opr2 != "s" {
-				log.Fatal("did not recognize type of operand #2.")
-			}
+	sweep_op2 := sweep_cmd.String("operand2-type", "integer",
+		"`type` of the second operand to the instruction "+
+			"(integer / normal / subnormal)")
 
-			if contains(sp_objects, instr) {
-				rand_benchmark(arch, opr1, opr2, instr)
-			} else if contains(dp_objects, instr) {
-				rand_benchmark(arch, opr1, opr2, instr)
-			} else if contains(int_objects, instr) {
-				rand_benchmark(arch, opr1, opr2, instr)
-			}
-		} else if cmd == "test-prediction" {
-			test_prediction()
+	validate_instr := validate_cmd.String("instr", "",
+		"`instruction` to validate (required)")
+
+	validate_arch := validate_cmd.String("arch", "rocket",
+		"`architecture` (rocket or boom)")
+
+	validate_results := validate_cmd.String("prediction-file", "",
+		"`file` containing predictions produced by the R script (required)")
+
+	args := os.Args[1:]
+
+	if len(args) == 0 {
+		flag.PrintDefaults()
+		os.Exit(1)
+	}
+
+	if args[0] == "clean" {
+	} else if args[0] == "sweep" {
+		sweep_cmd.Parse(args[1:])
+	} else if args[0] == "validate" {
+		validate_cmd.Parse(args[1:])
+	} else {
+		fmt.Println("command not in { clean | sweep | validate }, exiting ...")
+		os.Exit(1)
+	}
+
+	if clean_cmd.Parsed() {
+		clean(sp_objects, dtype_sp)
+		clean(dp_objects, dtype_dp)
+		clean(int_objects, dtype_int)
+		clean(mem_objects, dtype_mem)
+	} else if sweep_cmd.Parsed() {
+		if is_valid_arch(*sweep_arch) == false {
+			fmt.Println("Invalid 'arch' for the 'sweep' command.\n")
+			sweep_cmd.PrintDefaults()
+			os.Exit(1)
 		}
+
+		if is_valid_operand_type(*sweep_op1) == false {
+			fmt.Println("Invalid 'operand1-type' for the 'sweep' command.\n")
+			sweep_cmd.PrintDefaults()
+			os.Exit(1)
+		}
+
+		if is_valid_operand_type(*sweep_op2) == false {
+			fmt.Println("Invalid 'operand2-type' for the 'sweep' command.\n")
+			sweep_cmd.PrintDefaults()
+			os.Exit(1)
+		}
+
+		if is_valid_instr(*sweep_instr) == false {
+			fmt.Println("Invalid 'instr' for the 'sweep' command.\n")
+			sweep_cmd.PrintDefaults()
+			os.Exit(1)
+		}
+
+		sweep_instr_operands(*sweep_arch, *sweep_op1, *sweep_op2, *sweep_instr)
+	} else if validate_cmd.Parsed() {
+		if is_valid_arch(*validate_arch) == false {
+			fmt.Println("Invalid 'arch' for the 'validate' command.\n")
+			validate_cmd.PrintDefaults()
+			os.Exit(1)
+		}
+
+		if is_valid_instr(*validate_instr) == false {
+			fmt.Println("Invalid 'instr' for the 'validate' command.\n")
+			validate_cmd.PrintDefaults()
+			os.Exit(1)
+		}
+
+		test_prediction(*validate_arch, *validate_instr, *validate_results)
 	}
 }
