@@ -4,3 +4,7 @@ Rplots.pdf
 
 # temporary editor files
 *.swp
+
+# temporary object files
+*.o
+test
