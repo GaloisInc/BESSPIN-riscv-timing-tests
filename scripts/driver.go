@@ -27,6 +27,8 @@ const (
 	dtype_mem dtype_t = 4
 )
 
+var MAX_THREAD_COUNT = 4
+
 var CC = "riscv64-unknown-elf-gcc"
 var CFLAGS = "-I include -mcmodel=medany -std=gnu99 -O2"
 var LDFLAGS = "-static -nostartfiles -T test.ld"
@@ -368,7 +370,7 @@ func sweep_instr_operands(arch string, op1 string, op2 string, instr string) {
 	operands := generate_int_operands()
 
 	test_count := len(operands) * len(operands)
-	sprinter := bagpipe.NewSprinter(exec_one, 24, test_count)
+	sprinter := bagpipe.NewSprinter(exec_one, MAX_THREAD_COUNT, test_count)
 
 	for idx1, operand1 := range operands {
 		s_op1 := fmt.Sprintf("%016x", operand1)
@@ -456,7 +458,7 @@ func test_prediction(arch string, instr string, pred_file string) {
 	emulator_dir := get_emulator_dir(arch)
 	emulator_bin := get_emulator_bin(arch)
 
-	sprinter := bagpipe.NewSprinter(exec_one, 48, len(lines)-1)
+	sprinter := bagpipe.NewSprinter(exec_one, MAX_THREAD_COUNT, len(lines)-1)
 
 	for idx, exp := range exps {
 		status := fmt.Sprintf("%4d of %4d", idx, len(exps))
