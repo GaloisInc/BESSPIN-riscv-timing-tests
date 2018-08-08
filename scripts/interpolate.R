@@ -72,7 +72,7 @@ control_matrix <- as.matrix(control)
 
 point_count <- 100
 
-triangulation <- delaunayn(control_matrix)
+triangulation <- delaunayn(control_matrix, options = "QbB")
 sample_x <- max(data$x) * runif(point_count)
 sample_y <- max(data$y) * runif(point_count)
 sample_points <- cbind(sample_x, sample_y)
