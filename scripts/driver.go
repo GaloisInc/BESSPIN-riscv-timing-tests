@@ -461,8 +461,8 @@ func test_prediction(arch string, instr string, pred_file string) {
 
 	for idx, exp := range exps {
 		status := fmt.Sprintf("%4d of %4d", idx, len(exps))
-		bagpipe.UpdateStatus("testing pred for " + instr + " [ " + status +
-			" ] ... ")
+		bagpipe.UpdateStatus("testing prediction for " + instr + " [ " +
+			status + " ] ... ")
 
 		s_predicted := strconv.FormatFloat(exp.predicted_value, 'f', 2, 64)
 
