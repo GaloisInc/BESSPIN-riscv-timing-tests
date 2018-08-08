@@ -20,11 +20,22 @@ import (
 type dtype_t int
 
 const (
-	dtype_xxx dtype_t = 0
-	dtype_int dtype_t = 1
-	dtype_sp  dtype_t = 2
-	dtype_dp  dtype_t = 3
-	dtype_mem dtype_t = 4
+	dtype_xxx dtype_t = iota
+	dtype_int
+	dtype_sp
+	dtype_dp
+	dtype_mem
+)
+
+type fp_type_t int
+
+const (
+	fp_zero fp_type_t = iota
+	fp_normal
+	fp_subnormal
+	fp_pinf
+	fp_ninf
+	fp_nan
 )
 
 var MAX_THREAD_COUNT = 4
@@ -44,20 +55,9 @@ var int_objects = []string{
 	"mul", "mulh", "mulhsu", "mulhu", "div", "divu", "rem", "remu",
 }
 
-var int_operands = []string{
-	"0", "f", "ff", "fff", "ffff", "fffff", "ffffff", "fffffff",
-	"ffffffff", "fffffffff", "ffffffffff", "fffffffffff", "ffffffffffff",
-	"fffffffffffff", "ffffffffffffff", "fffffffffffffff",
-	"7fffffffffffffff",
-}
-
 var sp_objects = []string{
 	"fadd.s", "fsub.s", "fmul.s", "fdiv.s", "fsgnj.s", "fsgnjn.s",
 	"fsgnjx.s", "fmin.s", "fmax.s",
-}
-
-var sp_operands = []string{
-	"00000000", "40600000", "00084000", "7f800000", "ff800000", "7f800200",
 }
 
 var dp_objects = []string{
@@ -65,17 +65,8 @@ var dp_objects = []string{
 	"fsgnjx.d", "fmin.d", "fmax.d",
 }
 
-var dp_operands = []string{
-	"0000000000000000", "4025000000000000", "0000000000000400",
-	"7ff0000000000000", "fff0000000000000", "7ff0000000000001",
-}
-
 var mem_objects = []string{
 	"lb", "sb", "lh", "sh", "lw", "sw", "flw", "fsw", "fld", "fsd",
-}
-
-var mem_operands = []string{
-	"0", "1", "2", "3", "4", "5", "6", "7", "8", "9",
 }
 
 func get_dtype(instr string) dtype_t {
@@ -205,23 +196,166 @@ func rand_int(min int64, max int64) int64 {
 	return rand.Int63n(max-min) + min
 }
 
-func generate_subnormal_sp_operand() string {
+func zero_sp_opr() uint64 {
+	return 0
+}
+
+func pinf_sp_opr() uint64 {
+	return uint64(all_ones(8) << 23)
+}
+
+func ninf_sp_opr() uint64 {
+	return uint64(all_ones(8)<<23) | (1 << 31)
+}
+
+func nan_sp_opr() uint64 {
 	random_subnormal := rand_int(1, all_ones(23))
-	return fmt.Sprintf("%016x", random_subnormal)
+	return uint64(all_ones(8)<<23) | uint64(random_subnormal)
+}
+
+func subnormal_sp_opr() uint64 {
+	return uint64(rand_int(1, all_ones(23)))
+}
+
+func normal_sp_opr() uint64 {
+	random_subnormal := uint64(rand_int(1, all_ones(23)))
+	exponent_mask := uint64(rand_int(1, all_ones(8)) << 23)
+
+	return random_subnormal | exponent_mask
+}
+
+func fpclassify_sp(float uint32) fp_type_t {
+	exponent := (float >> 23) & 0xff
+
+	if exponent == 0 {
+		if float<<1 != 0 {
+			return fp_subnormal
+		}
+
+		return fp_zero
+	}
+
+	if exponent == 0xff {
+		if float<<9 != 0 {
+			return fp_nan
+		}
+
+		if float>>31 == 0 {
+			return fp_pinf
+		}
+
+		return fp_ninf
+	}
+
+	return fp_normal
+}
+
+func zero_dp_opr() uint64 {
+	return 0
+}
+
+func pinf_dp_opr() uint64 {
+	return uint64(all_ones(11) << 52)
+}
+
+func ninf_dp_opr() uint64 {
+	return uint64(all_ones(11)<<52) | (1 << 63)
+}
+
+func nan_dp_opr() uint64 {
+	random_subnormal := rand_int(1, all_ones(52))
+	return uint64(all_ones(11)<<52) | uint64(random_subnormal)
+}
+
+func subnormal_dp_opr() uint64 {
+	return uint64(rand_int(1, all_ones(52)))
+}
+
+func normal_dp_opr() uint64 {
+	random_subnormal := uint64(rand_int(1, all_ones(52)))
+	exponent_mask := uint64(rand_int(1, all_ones(11)) << 52)
+
+	return random_subnormal | exponent_mask
+}
+
+func fpclassify_dp(float uint64) fp_type_t {
+	exponent := (float >> 52) & 0x7ff
+
+	if exponent == 0 {
+		if float<<1 != 0 {
+			return fp_subnormal
+		}
+
+		return fp_zero
+	}
+
+	if exponent == 0x7ff {
+		if float<<12 != 0 {
+			return fp_nan
+		}
+
+		if float>>63 == 0 {
+			return fp_pinf
+		}
+
+		return fp_ninf
+	}
+
+	return fp_normal
+}
+
+func class_to_string(fp_type fp_type_t) string {
+	switch fp_type {
+	case fp_zero:
+		return "zero"
+	case fp_normal:
+		return "normal"
+	case fp_subnormal:
+		return "subnormal"
+	case fp_pinf:
+		return "+inf"
+	case fp_ninf:
+		return "-inf"
+	case fp_nan:
+		return "nan"
+	}
+
+	return "unknown"
+}
+
+func sp_operands() []uint64 {
+	operands := []uint64{}
+
+	for idx := 0; idx < 3; idx += 1 {
+		operands = append(operands, zero_sp_opr())
+		operands = append(operands, normal_sp_opr())
+		operands = append(operands, subnormal_sp_opr())
+		operands = append(operands, pinf_sp_opr())
+		operands = append(operands, ninf_sp_opr())
+		operands = append(operands, nan_sp_opr())
+	}
+
+	return operands
+}
+
+func dp_operands() []uint64 {
+	operands := []uint64{}
+
+	for idx := 0; idx < 3; idx += 1 {
+		operands = append(operands, zero_dp_opr())
+		operands = append(operands, normal_dp_opr())
+		operands = append(operands, subnormal_dp_opr())
+		operands = append(operands, pinf_dp_opr())
+		operands = append(operands, ninf_dp_opr())
+		operands = append(operands, nan_dp_opr())
+	}
+
+	return operands
 }
 
 func generate_subnormal_dp_operand() string {
 	random_subnormal := rand_int(1, all_ones(53))
 	return fmt.Sprintf("%016x", random_subnormal)
-}
-
-func generate_normal_sp_operand() string {
-	random_subnormal := rand_int(1, all_ones(23))
-
-	exponent_mask := rand_int(1, all_ones(8)) << 23
-	random_normal := random_subnormal | exponent_mask
-
-	return fmt.Sprintf("%016x", random_normal)
 }
 
 func generate_normal_dp_operand() string {
@@ -231,35 +365,6 @@ func generate_normal_dp_operand() string {
 	random_normal := random_subnormal | exponent_mask
 
 	return fmt.Sprintf("%016x", random_normal)
-}
-
-func generate_operand(operand_type string, dtype dtype_t) string {
-	if operand_type == "n" {
-		if dtype == dtype_sp {
-			return generate_normal_sp_operand()
-		}
-
-		if dtype == dtype_dp {
-			return generate_normal_dp_operand()
-		}
-
-		log.Fatal("failed to recognize data type!")
-	}
-
-	if operand_type == "s" {
-		if dtype == dtype_sp {
-			return generate_subnormal_sp_operand()
-		}
-
-		if dtype == dtype_dp {
-			return generate_subnormal_dp_operand()
-		}
-
-		log.Fatal("failed to recognize data type!")
-	}
-
-	log.Fatal("failed to recognize operand type!")
-	return fmt.Sprintf("%016x", 0)
 }
 
 type input_t struct {
@@ -356,18 +461,29 @@ func get_emulator_bin(arch string) string {
 	return "--unknown--"
 }
 
-func sweep_instr_operands(arch string, op1 string, op2 string, instr string) {
+func sweep_instr_operands(arch string, instr string) {
 	emulator_dir := get_emulator_dir(arch)
 	emulator_bin := get_emulator_bin(arch)
 	data_dir := bagpipe.WorkingDirectory() + "/../results/" + arch + "/data"
 
-	log_filename := "out." + instr + "." + op1 + "." + op2
+	log_filename := "out." + instr
 	if bagpipe.FileExists(data_dir + "/" + log_filename) {
 		bagpipe.DeleteFile(data_dir + "/" + log_filename)
 	}
 
 	rand.Seed(time.Now().UTC().UnixNano())
-	operands := generate_int_operands()
+
+	dtype := get_dtype(instr)
+
+	var operands []uint64
+
+	if dtype == dtype_int {
+		operands = int_operands()
+	} else if dtype == dtype_sp {
+		operands = sp_operands()
+	} else if dtype == dtype_dp {
+		operands = dp_operands()
+	}
 
 	test_count := len(operands) * len(operands)
 	sprinter := bagpipe.NewSprinter(exec_one, MAX_THREAD_COUNT, test_count)
@@ -406,7 +522,22 @@ func sweep_instr_operands(arch string, op1 string, op2 string, instr string) {
 		s_l_op := fmt.Sprintf("%d", l_op)
 		s_r_op := fmt.Sprintf("%d", r_op)
 
-		log_line := s_l_op + " " + s_r_op + " " + output.Instr_count + " " + output.Cycle_count
+		if dtype == dtype_sp {
+			class_l_op := fpclassify_sp(uint32(l_op))
+			class_r_op := fpclassify_sp(uint32(r_op))
+
+			s_l_op = fmt.Sprintf("%16s", class_to_string(class_l_op))
+			s_r_op = fmt.Sprintf("%16s", class_to_string(class_r_op))
+		} else {
+			class_l_op := fpclassify_dp(l_op)
+			class_r_op := fpclassify_dp(r_op)
+
+			s_l_op = fmt.Sprintf("%16s", class_to_string(class_l_op))
+			s_r_op = fmt.Sprintf("%16s", class_to_string(class_r_op))
+		}
+
+		log_line := s_l_op + " " + s_r_op + " " + output.Instr_count + " " +
+			output.Cycle_count
 
 		bagpipe.AppendFile(data_dir+"/"+log_filename, log_line+"\n")
 	}
@@ -415,7 +546,9 @@ func sweep_instr_operands(arch string, op1 string, op2 string, instr string) {
 		"/data/" + log_filename + "\n")
 }
 
-func generate_int_operands() []uint64 {
+func int_operands() []uint64 {
+	// TODO: Parametrize this function to select the number of operands.
+
 	var operand_list []uint64
 
 	for idx := uint64(0); idx <= 56; idx += 8 {
@@ -522,11 +655,6 @@ func is_valid_arch(arch string) bool {
 	return arch == "rocket" || arch == "boom"
 }
 
-func is_valid_operand_type(operand_type string) bool {
-	return operand_type == "integer" || operand_type == "normal" ||
-		operand_type == "subnormal"
-}
-
 func main() {
 	flag.Parse()
 
@@ -539,14 +667,6 @@ func main() {
 
 	sweep_arch := sweep_cmd.String("arch", "rocket",
 		"`architecture` (rocket or boom)")
-
-	sweep_op1 := sweep_cmd.String("operand1-type", "integer",
-		"`type` of the first operand to the instruction "+
-			"(integer / normal / subnormal)")
-
-	sweep_op2 := sweep_cmd.String("operand2-type", "integer",
-		"`type` of the second operand to the instruction "+
-			"(integer / normal / subnormal)")
 
 	validate_instr := validate_cmd.String("instr", "",
 		"`instruction` to validate (required)")
@@ -586,25 +706,13 @@ func main() {
 			os.Exit(1)
 		}
 
-		if is_valid_operand_type(*sweep_op1) == false {
-			fmt.Println("Invalid 'operand1-type' for the 'sweep' command.\n")
-			sweep_cmd.PrintDefaults()
-			os.Exit(1)
-		}
-
-		if is_valid_operand_type(*sweep_op2) == false {
-			fmt.Println("Invalid 'operand2-type' for the 'sweep' command.\n")
-			sweep_cmd.PrintDefaults()
-			os.Exit(1)
-		}
-
 		if is_valid_instr(*sweep_instr) == false {
 			fmt.Println("Invalid 'instr' for the 'sweep' command.\n")
 			sweep_cmd.PrintDefaults()
 			os.Exit(1)
 		}
 
-		sweep_instr_operands(*sweep_arch, *sweep_op1, *sweep_op2, *sweep_instr)
+		sweep_instr_operands(*sweep_arch, *sweep_instr)
 	} else if validate_cmd.Parsed() {
 		if is_valid_arch(*validate_arch) == false {
 			fmt.Println("Invalid 'arch' for the 'validate' command.\n")
