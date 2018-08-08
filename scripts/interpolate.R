@@ -1,3 +1,5 @@
+#!/usr/bin/env Rscript
+
 library(geometry)
 library(Matrix)
 
@@ -53,7 +55,13 @@ dec_dbl_to_hex <- function(dec_dbl, width) {
     return(result)
 }
 
-data <- read.table("../results/rock/data/out.div.i.i.56", header = F)
+args = commandArgs(trailingOnly = TRUE)
+
+if (length(args) == 0) {
+    stop("need one argument specifying the measurements of instruction timing")
+}
+
+data <- read.table(args[1], header = F)
 # data$V1 <- hex_to_dec_dbl(data$V1)
 # data$V2 <- hex_to_dec_dbl(data$V2)
 
@@ -62,7 +70,7 @@ data <- data.frame(x = data$V1, y = data$V2, z = data$V4)
 control <- data.frame(x = data$x, y = data$y)
 control_matrix <- as.matrix(control)
 
-point_count <- 500
+point_count <- 100
 
 triangulation <- delaunayn(control_matrix)
 sample_x <- max(data$x) * runif(point_count)
