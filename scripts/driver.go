@@ -411,8 +411,8 @@ func sweep_instr_operands(arch string, op1 string, op2 string, instr string) {
 		bagpipe.AppendFile(data_dir+"/"+log_filename, log_line+"\n")
 	}
 
-	bagpipe.UpdateStatus("test complete, results in results/" + arch +
-		"/data/" + log_filename + ".\n")
+	bagpipe.UpdateStatus("test complete, results in ../results/" + arch +
+		"/data/" + log_filename + "\n")
 }
 
 func generate_int_operands() []uint64 {
