@@ -1,2 +1,6 @@
+# temporary plots
 plot.png
 Rplots.pdf
+
+# temporary editor files
+*.swp
