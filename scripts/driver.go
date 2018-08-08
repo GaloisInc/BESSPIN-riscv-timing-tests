@@ -417,10 +417,9 @@ func sweep_instr_operands(arch string, op1 string, op2 string, instr string) {
 
 func generate_int_operands() []uint64 {
 	var operand_list []uint64
-	operand_list = append(operand_list, 0)
 
-	for idx := uint64(0); idx < 56; idx += 8 {
-		operand := uint64(1) << idx
+	for idx := uint64(0); idx <= 56; idx += 8 {
+		operand := (uint64(1) << idx) - 1
 		operand_list = append(operand_list, operand)
 	}
 
