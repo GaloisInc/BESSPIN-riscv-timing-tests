@@ -91,10 +91,10 @@ Plots for rocket chip are located [here](rocket-results.md).
 
 |  **Instruction(s)** | **Slowdown** |
 | :------------------ | -----------: |
-| [`fdiv.d`](results/rock/plots/plot-fdiv.d.png) | 10.8x |
-| [`div`](results/rock/plots/plot-div.png), [`divu`](results/rock/plots/plot-divu.png), [`rem`](results/rock/plots/plot-rem.png), [`remu`](results/rock/plots/plot-remu.png) | 10.3x |
-| [`fdiv.s`](results/rock/plots/plot-fdiv.s.png) | 5.3x |
-| [`mul`](results/rock/plots/plot-mul.png) | 1.7x |
+| [`fdiv.d`](results/rocket/plots/plot-fdiv.d.png) | 10.8x |
+| [`div`](results/rocket/plots/plot-div.png), [`divu`](results/rocket/plots/plot-divu.png), [`rem`](results/rocket/plots/plot-rem.png), [`remu`](results/rocket/plots/plot-remu.png) | 10.3x |
+| [`fdiv.s`](results/rocket/plots/plot-fdiv.s.png) | 5.3x |
+| [`mul`](results/rocket/plots/plot-mul.png) | 1.7x |
 
 
 #### Accuracy of Analytical Models of Timing
