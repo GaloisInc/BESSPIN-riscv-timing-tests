@@ -419,7 +419,7 @@ func generate_int_operands() []uint64 {
 	var operand_list []uint64
 	operand_list = append(operand_list, 0)
 
-	for idx := uint64(0); idx < 60; idx += 1 {
+	for idx := uint64(0); idx < 56; idx += 8 {
 		operand := uint64(1) << idx
 		operand_list = append(operand_list, operand)
 	}
