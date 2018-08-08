@@ -145,6 +145,30 @@ value at the requested point in the 2D space is interpolated based on the
 values of the three points of the containing triangle.
 
 
+## Debugging ##
+
+Here are the steps to reproduce some of the output produced by
+`scripts/driver.go`.  Let's assume that we are interested in benchmarking the
+`mul` instruction on the 'Rocket' core.
+
+    # First, pick two operands (say 0xa0 and 0x1f) to pass to the `mul`
+    # instruction and bake them into the object file.  The build command is
+    # located in src/build-cmd.txt.
+
+    $ riscv64-unknown-elf-gcc -I include -mcmodel=medany -std=gnu99 -O2 -DINST=mul crt.S syscalls.c int-driver.c -O2 -static -nostartfiles -T test.ld -o test -DOP1=0xa0 -DOP2=0x1f
+
+    # Run the resulting binary (test) on the Rocket core.
+
+    $ ${HOME}/src/rocket-chip/emulator/emulator-freechips.rocketchip.system-DefaultConfig -s 0 -c ./test
+    This emulator compiled with JTAG Remote Bitbang client. To enable, use +jtag_rbb_enable=1.
+    Listening on port 46005
+    instrs  000b    cycles  0019
+    Completed after 142900 cycles
+
+    # The above output indicates that a total of 0xb (i.e. 11) instructions
+    # were executed in a total of 0x19 (i.e. 25) cycles.
+
+
 ## Known Issues ##
 
 R, and hence the interpolation scripts, do not support arbitrary-precision
