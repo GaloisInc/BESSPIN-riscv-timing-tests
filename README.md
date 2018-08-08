@@ -1,71 +1,89 @@
-## RISCV Instruction Latency Tests
+# RISC-V Instruction Latency Tests #
 
-This code measures the latency of various RISV instructions from the Base ISA and from the M, F, and D extensions on the Rocket chip (https://github.com/freechipsproject/rocket-chip) using a Verilator-based simulation.
+This code measures the latency of various RISC-V instructions from the basic
+ISA and from the M, F, and D extensions on the
+[Rocket](https://github.com/freechipsproject/rocket-chip) and
+[BOOM](https://github.com/ucb-bar/riscv-boom) using a Verilator-based
+simulation.
 
 
-### Prerequisites
+## Prerequisites ##
 
-  - Go (with the `gitlab.com/ashay/bagpipe` package)
-  - R (with `ggplot2` and `reshape2` packages)
-  - Scripts assume `riscv64-unknown-elf-gcc` is in `PATH`, and that the Rocket chip is built in `${HOME}/src/rocket-chip/emulator`.
+This code uses a driver script written in Go and some post-processing scripts
+written in R.
+
+ - Recent versions of [golang](https://golang.org/) and
+   [R](https://www.r-project.org/).
+
+ - [`riscv-tools`](https://github.com/riscv/riscv-tools) in `PATH`.
+
+ - Rocket and/or BOOM emulators in `${HOME}/src/rocket-chip` and
+   `${HOME}/src/boom-template` directories respectively.
+
+
+## Setting Up ##
+
+Fetch the relevant dependent packages for the Go and R scripts.
+
+    # Fetches code for file system and multi-threading APIs.
+    $ go get gitlab.com/ashay/bagpipe
+
+    # Fetches code for interpolating and plotting results.
+    $ R --no-save < scripts/init.R
 
 
 ### How to Gather Data and Plot Results
 
     cd src
-    
-    # Specify targets to build
-    go run ../scripts/driver.go build-int build-sp build-dp
-    
-    # Run tests for a specific architecture and instruction
-    go run ../scripts/driver.go run-rock-fdiv.s
-    go run ../scripts/driver.go run-boom-add
-    go run ../scripts/driver.go run-boom-div
 
-    # Randomize integer operands of div, divu, rem, remu, and mul instructions.
-    go run ../scripts/driver.go rand-rock-div-i-i
-    go run ../scripts/driver.go rand-rock-divu-i-i
-    go run ../scripts/driver.go rand-rock-rem-i-i
-    go run ../scripts/driver.go rand-rock-remu-i-i
-    go run ../scripts/driver.go rand-rock-mul-i-i
+    # Adjust the maximum number of concurrent measurements based on the number
+    # of processor cores.
+    $ grep "var MAX_THREAD_COUNT" ../scripts/driver.go
+    var MAX_THREAD_COUNT = 4
 
-    # Validate prediction accuracy of div, divu, rem, remu, and mul instructions.
-    go run ../scripts/divrem-rocket-predict.go ../results/rock/data/out.div.i.i
-    go run ../scripts/divrem-rocket-predict.go ../results/rock/data/out.divu.i.i
-    go run ../scripts/divrem-rocket-predict.go ../results/rock/data/out.rem.i.i
-    go run ../scripts/divrem-rocket-predict.go ../results/rock/data/out.remu.i.i
-    go run ../scripts/mul-rocket-predict.go ../results/rock/data/out.mul.i.i
+    # Gather measurements for a specific instruction and processor.
 
-    # Compute the range of values and latencies for the mul instruction.
-    go run compute-single-dimension-ranges.go ../results/rock/data/out.mul.i.i                                                                                                                                  riscv-timing-tests/scripts
+    # Here, we are sweeping through interspersed operands of the 'mul'
+    # instruction on the 'rocket' chip.  This will take a while to complete.
 
-    # Randomize floating-point operands (pick from normal and subnormal values) of fdiv.s and fdiv.d instructions.
-    go run ../scripts/driver.go rand-rock-fdiv.s-n-n
-    go run ../scripts/driver.go rand-rock-fdiv.s-n-s
-    go run ../scripts/driver.go rand-rock-fdiv.s-s-n
-    go run ../scripts/driver.go rand-rock-fdiv.s-s-s
+    $ go run ../scripts/driver.go sweep --instr mul --arch rocket
+    test complete, results in ../results/rocket/data/out.mul.integer.integer
 
-    go run ../scripts/driver.go rand-rock-fdiv.d-n-n
-    go run ../scripts/driver.go rand-rock-fdiv.d-n-s
-    go run ../scripts/driver.go rand-rock-fdiv.d-s-n
-    go run ../scripts/driver.go rand-rock-fdiv.d-s-s
-    
-    # Plot variations in instruction latencies (for all instructions)
-    cd ../results/rock/plots
-    R --no-save < ../../../scripts/plot.R
+    # For giggles, plot the measurements (of the *integer* instruction) using a heat map.
+    $ Rscript ../scripts/plot-int.R ../results/rocket/data/out.mul.integer.integer
 
-    cd ../results/boom/plots
-    R --no-save < ../../../scripts/plot.R
+    # Generate interpolated results in /tmp/pred.out.
+    $ Rscript ../scripts/interpolate.R ../results/rocket/data/out.mul.integer.integer > /tmp/pred.out
+
+    # Validate the results of the interpolation.
+    $ go run ../scripts/driver.go validate --instr mul --arch rocket --prediction-file /tmp/pred.out
+    95th percentile error: 0.84 cycle(s), 99th percentile error: 0.91 cycle(s), maximum error: 0.91 cycle(s)
+
+    # The results above indicate that the interpolation script was able to
+    # predict the cycle count for previously-unobserved operands for the 'mul'
+    # instruction on the 'rocket' chip within at most 0.91 cycles, with a
+    # 95th-percentile error of 0.84 cycles.
 
 
 ### Note about Debug Interrupts
 
-If you plan to tweak the loop count in `src/*-driver.c`, note that running the test for too long may cause the (occassional) debug interrupts from the simulation to perturb the results.  In particular, if you see a wide variation in the instruction count (despite only changing the operand values), then the debug interrupts are suspect.  See https://github.com/freechipsproject/rocket-chip/issues/1495 for details and how to know whether the debug interrupt occured.
+If you plan to tweak the loop count in `src/*-driver.c`, note that running the
+test for too long may cause the (occassional) debug interrupts from the
+simulation to perturb the results.  In particular, if you see a wide variation
+in the instruction count (despite only changing the operand values), then the
+debug interrupts are suspect.  See
+https://github.com/freechipsproject/rocket-chip/issues/1495 for details and how
+to know whether the debug interrupt occured.
 
 
 ## Results
 
-The following tables show the slowdown in instruction execution based on the choice of operand values.  For integer instructions, the operands range from 0x0 to 0x7fff\_ffff\_ffff\_ffff, where each increment represents the lowermost bits (in multiples of 4) being set to 1s.  For floating-point instructions, the operands are from the set { zero, normal, subnormal, +inf, -inf, and not-a-number }.
+The following tables show the slowdown in instruction execution based on the
+choice of operand values.  For integer instructions, the operands range from
+0x0 to 0x7fff\_ffff\_ffff\_ffff, where each increment represents the lowermost
+bits (in multiples of 4) being set to 1s.  For floating-point instructions, the
+operands are from the set { zero, normal, subnormal, +inf, -inf, and
+not-a-number }.
 
 ### Rocket
 
@@ -81,9 +99,12 @@ Plots for rocket chip are located [here](rocket-results.md).
 
 #### Accuracy of Analytical Models of Timing
 
-The latency from executing each of `div`, `divu`, `rem`, and `remu` instructions varies between 2 to 64 cycles, whereas the latency of `fdiv.s` instruction varies between 2 and 23 cycles.
+The latency from executing each of `div`, `divu`, `rem`, and `remu`
+instructions varies between 2 to 64 cycles, whereas the latency of `fdiv.s`
+instruction varies between 2 and 23 cycles.
 
-The following table shows the mean and standard deviation of the observed error in cycle counts.
+The following table shows the mean and standard deviation of the observed error
+in cycle counts.
 
 | **Instruction**       | **Mean err** | **stdev** | **Prediction** |
 | :-------------------- | -----------: | --------: | -------------: |
@@ -112,3 +133,28 @@ Plots for boom chip are located [here](boom-results.md).
 | :----------------- | -----------: |
 | [`div`](results/boom/plots/plot-div.png), [`divu`](results/boom/plots/plot-divu.png), [`rem`](results/boom/plots/plot-rem.png), [`remu`](results/boom/plots/plot-remu.png) | 6.1x |
 | [`fdiv.s`](results/boom/plots/plot-fdiv.s.png), [`fdiv.d`](results/boom/plots/plot-fdiv.d.png) | 3.3x |
+
+
+## Implementation of Interpolation Script ##
+
+The interpolation code uses Delaunay Triangulation to form an irregular grid of
+measurements for different operand values, before computing the Barycentric
+coordinates for the requested (i.e. previously-unobserved) point within one of
+the triangles computed in the previous step. As the third and final step, the
+value at the requested point in the 2D space is interpolated based on the
+values of the three points of the containing triangle.
+
+
+## Known Issues ##
+
+R, and hence the interpolation scripts, do not support arbitrary-precision
+integer arithmetic.  This places restrictions on the the interpolation script's
+ability to create a Delaunay mesh, effectively producing garbage results.
+Consequently, the `driver.go` script that collects measurements limits the
+maximum operand value to 2<sup>56</sup> - 1.
+
+A possible workaround is to convert the (integer) operand values to double-precision
+floating-point numbers, but such numbers lose precision in the low bits for
+large values, resulting in aliasing, and thus incorrect results.  Furthermore,
+converting from double-precision numbers to integer hexadecimal numbers is a
+risky and error-prone step.
