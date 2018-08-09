@@ -113,36 +113,6 @@ func link(bin string, op1 string, op2 string) string {
 	return exe_file
 }
 
-func clean(objects []string, dtype dtype_t) {
-	bagpipe.UpdateStatus("cleaning ...")
-
-	for _, object := range objects {
-		if dtype == dtype_int {
-			if bagpipe.FileExists(object + ".i.i") {
-				bagpipe.DeleteFile(object + ".i.i")
-			}
-		} else if dtype == dtype_sp || dtype == dtype_dp {
-			if bagpipe.FileExists(object + ".n.n") {
-				bagpipe.DeleteFile(object + ".n.n")
-			}
-
-			if bagpipe.FileExists(object + ".n.s") {
-				bagpipe.DeleteFile(object + ".n.s")
-			}
-
-			if bagpipe.FileExists(object + ".s.n") {
-				bagpipe.DeleteFile(object + ".s.n")
-			}
-
-			if bagpipe.FileExists(object + ".s.s") {
-				bagpipe.DeleteFile(object + ".s.s")
-			}
-		}
-	}
-
-	bagpipe.ClearStatus()
-}
-
 func contains(objects []string, object string) bool {
 	for _, element := range objects {
 		if element == object {
@@ -656,7 +626,6 @@ func is_valid_arch(arch string) bool {
 func main() {
 	flag.Parse()
 
-	clean_cmd := flag.NewFlagSet("clean", flag.ExitOnError)
 	sweep_cmd := flag.NewFlagSet("sweep", flag.ExitOnError)
 	validate_cmd := flag.NewFlagSet("validate", flag.ExitOnError)
 
@@ -682,22 +651,16 @@ func main() {
 		os.Exit(1)
 	}
 
-	if args[0] == "clean" {
-	} else if args[0] == "sweep" {
+	if args[0] == "sweep" {
 		sweep_cmd.Parse(args[1:])
 	} else if args[0] == "validate" {
 		validate_cmd.Parse(args[1:])
 	} else {
-		fmt.Println("command not in { clean | sweep | validate }, exiting ...")
+		fmt.Println("command not in { sweep | validate }, exiting ...")
 		os.Exit(1)
 	}
 
-	if clean_cmd.Parsed() {
-		clean(sp_objects, dtype_sp)
-		clean(dp_objects, dtype_dp)
-		clean(int_objects, dtype_int)
-		clean(mem_objects, dtype_mem)
-	} else if sweep_cmd.Parsed() {
+	if sweep_cmd.Parsed() {
 		if is_valid_arch(*sweep_arch) == false {
 			fmt.Println("Invalid 'arch' for the 'sweep' command.\n")
 			sweep_cmd.PrintDefaults()
