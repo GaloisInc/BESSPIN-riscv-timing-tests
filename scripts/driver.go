@@ -526,7 +526,7 @@ func sweep_instr_operands(arch string, instr string) {
 
 			s_l_op = fmt.Sprintf("%16s", class_to_string(class_l_op))
 			s_r_op = fmt.Sprintf("%16s", class_to_string(class_r_op))
-		} else {
+		} else if dtype == dtype_dp {
 			class_l_op := fpclassify_dp(l_op)
 			class_r_op := fpclassify_dp(r_op)
 
