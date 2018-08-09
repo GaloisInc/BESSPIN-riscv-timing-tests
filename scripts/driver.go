@@ -40,10 +40,6 @@ const (
 
 var MAX_THREAD_COUNT = 4
 
-var CC = "riscv64-unknown-elf-gcc"
-var CFLAGS = "-I include -mcmodel=medany -std=gnu99 -O2"
-var LDFLAGS = "-static -nostartfiles -T test.ld"
-
 var BOOM_DIR = bagpipe.HomeDirectory() + "/src/boom-template/verisim"
 var BOOM_BIN = "./simulator-boom.system-BoomConfig"
 
@@ -107,9 +103,11 @@ func link(bin string, op1 string, op2 string) string {
 		log.Fatal("invalid data type")
 	}
 
-	cmd := CC + " " + CFLAGS + " -DINST=" + bin + " -DOP1=0x" + op1 +
-		" -DOP2=0x" + op2 + " crt.S syscalls.c " + driver_file + " -O2 " +
-		LDFLAGS + " -o " + exe_file
+	cmd := fmt.Sprintf("riscv64-unknown-elf-gcc -Ienv -Icommon "+
+		"-mcmodel=medany -static -std=gnu99 -O2 -ffast-math -fno-common "+
+		"-fno-builtin-printf -DINST=%s -DOP1=0x%s -DOP2=0x%s -o %s %s "+
+		"common/syscalls.c common/crt.S -static -nostdlib -nostartfiles -lm "+
+		"-lgcc -T common/test.ld", bin, op1, op2, exe_file, driver_file)
 
 	bagpipe.ExecCommand(cmd, bagpipe.WorkingDirectory())
 	return exe_file
@@ -161,7 +159,7 @@ func exec(emulator_dir string, emulator_bin string, exe_file string) string {
 		log.Fatal("could not find " + exe_file)
 	}
 
-	cmd := emulator_bin + " -s 0 -c " + exe_file
+	cmd := emulator_bin + " -s 0 " + exe_file
 	return bagpipe.ExecCommand(cmd, emulator_dir)
 }
 

@@ -155,18 +155,17 @@ Here are the steps to reproduce some of the output produced by
     # instruction and bake them into the object file.  The build command is
     # located in src/build-cmd.txt.
 
-    $ riscv64-unknown-elf-gcc -I include -mcmodel=medany -std=gnu99 -O2 -DINST=mul crt.S syscalls.c int-driver.c -O2 -static -nostartfiles -T test.ld -o test -DOP1=0xa0 -DOP2=0x1f
+    $ riscv64-unknown-elf-gcc -Ienv -Icommon -mcmodel=medany -static -std=gnu99 -O2 -ffast-math -fno-common -fno-builtin-printf -DINST=mul -DOP1=0xa0 -DOP2=0x1f -o test int-driver.c common/syscalls.c common/crt.S -static -nostdlib -nostartfiles -lm -lgcc -T common/test.ld
 
     # Run the resulting binary (test) on the Rocket core.
 
-    $ ${HOME}/src/rocket-chip/emulator/emulator-freechips.rocketchip.system-DefaultConfig -s 0 -c ./test
+    $ ${HOME}/src/rocket-chip/emulator/emulator-freechips.rocketchip.system-DefaultConfig -s 0 ./test
     This emulator compiled with JTAG Remote Bitbang client. To enable, use +jtag_rbb_enable=1.
-    Listening on port 46005
-    instrs  000b    cycles  0019
-    Completed after 142900 cycles
+    Listening on port 43751
+    instrs  000b    cycles  0007
 
     # The above output indicates that a total of 0xb (i.e. 11) instructions
-    # were executed in a total of 0x19 (i.e. 25) cycles.
+    # were executed in a total of 0x07 cycles for a mean latency of 0.6 cycles.
 
 
 ## Known Issues ##
