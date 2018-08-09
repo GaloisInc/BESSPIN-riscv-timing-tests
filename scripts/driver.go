@@ -124,7 +124,6 @@ func contains(objects []string, object string) bool {
 }
 
 func exec(emulator_dir string, emulator_bin string, exe_file string) string {
-
 	if bagpipe.FileExists(exe_file) == false {
 		log.Fatal("could not find " + exe_file)
 	}
