@@ -173,22 +173,20 @@ func exec_one(input bytes.Buffer) bytes.Buffer {
 }
 
 func main() {
-	max_noops := 1024
+	max_noops := 12
 	sprinter := bagpipe.NewSprinter(exec_one, MAX_THREADS, max_noops)
 
 	for noop_count := uint64(0); noop_count < uint64(max_noops); noop_count += 1 {
 		s_noop_count := strconv.FormatUint(noop_count, 16)
 
-		input := input_t{Noop_count: s_noop_count, Emulator_dir: BOOM_DIR,
-			Emulator_bin: BOOM_BIN}
+		input := input_t{Noop_count: s_noop_count, Emulator_dir: ROCKET_DIR,
+			Emulator_bin: ROCKET_BIN}
 
 		status := fmt.Sprintf("%4d of %4d", noop_count+1, max_noops)
 		bagpipe.UpdateStatus("testing [" + status + " ] ... ")
 
 		sprinter.FeedWorker(input)
 	}
-
-	bagpipe.ClearStatus()
 
 	for idx := 0; idx < sprinter.ResultCount(); idx += 1 {
 		__input, __output := sprinter.ReadResult()
