@@ -97,34 +97,6 @@ Plots for rocket chip are located [here](rocket-results.md).
 | [`mul`](results/rocket/plots/plot-mul.png) | 1.7x |
 
 
-#### Accuracy of Analytical Models of Timing
-
-The latency from executing each of `div`, `divu`, `rem`, and `remu`
-instructions varies between 2 to 64 cycles, whereas the latency of `fdiv.s`
-instruction varies between 2 and 23 cycles.
-
-The following table shows the mean and standard deviation of the observed error
-in cycle counts.
-
-| **Instruction**       | **Mean err** | **stdev** | **Prediction** |
-| :-------------------- | -----------: | --------: | -------------: |
-| `mul`                 | 0.02         | 0.03      | [see `mul` code](scripts/mul-rocket-predict.go)    |
-| `div`                 | 1.40         | 1.82      | [see `div` code](scripts/divrem-rocket-predict.go) |
-| `divu`                | 1.34         | 1.77      | [see `div` code](scripts/divrem-rocket-predict.go) |
-| `rem`                 | 1.55         | 1.90      | [see `div` code](scripts/divrem-rocket-predict.go) |
-| `remu`                | 1.44         | 1.55      | [see `div` code](scripts/divrem-rocket-predict.go) |
-| `fdiv.s` (norm, norm) | 0.42         | 0.45      | 23 cycles      |
-| `fdiv.s` (norm, subn) | 0.40         | 0.45      | 23 cycles      |
-| `fdiv.s` (subn, norm) | 0.43         | 0.45      | 23 cycles      |
-| `fdiv.s` (subn, subn) | 0.44         | 0.45      | 23 cycles      |
-| `fdiv.s` (all others) |    -         |    -      |  2 cycles      |
-| `fdiv.d` (norm, norm) | 0.48         | 0.32      | 50 cycles      |
-| `fdiv.d` (norm, subn) | 0.62         | 0.69      | 50 cycles      |
-| `fdiv.d` (subn, norm) | 0.62         | 0.67      | 50 cycles      |
-| `fdiv.d` (subn, subn) | 0.42         | 0.45      | 53 cycles      |
-| `fdiv.d` (all others) |    -         |    -      |  2 cycles      |
-
-
 ### BOOM
 
 Plots for boom chip are located [here](boom-results.md).

@@ -24,7 +24,6 @@ const (
 	dtype_int
 	dtype_sp
 	dtype_dp
-	dtype_mem
 )
 
 type fp_type_t int
@@ -61,10 +60,6 @@ var dp_objects = []string{
 	"fsgnjx.d", "fmin.d", "fmax.d",
 }
 
-var mem_objects = []string{
-	"lb", "sb", "lh", "sh", "lw", "sw", "flw", "fsw", "fld", "fsd",
-}
-
 func get_dtype(instr string) dtype_t {
 	if contains(sp_objects, instr) {
 		return dtype_sp
@@ -76,10 +71,6 @@ func get_dtype(instr string) dtype_t {
 
 	if contains(int_objects, instr) {
 		return dtype_int
-	}
-
-	if contains(mem_objects, instr) {
-		return dtype_mem
 	}
 
 	return dtype_xxx
@@ -97,8 +88,6 @@ func link(bin string, op1 string, op2 string) string {
 		driver_file = "sp-driver.c"
 	} else if dtype == dtype_dp {
 		driver_file = "dp-driver.c"
-	} else if dtype == dtype_mem {
-		driver_file = "mem-driver.c"
 	} else {
 		log.Fatal("invalid data type")
 	}
