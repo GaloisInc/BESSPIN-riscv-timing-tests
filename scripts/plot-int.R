@@ -9,7 +9,7 @@ ffs <- function(x) {
 
 args = commandArgs(trailingOnly = TRUE)
 
-if (length(args) == 0) {
+if (length(args) != 1) {
     stop("need one argument specifying the file containing timing measurements")
 }
 
