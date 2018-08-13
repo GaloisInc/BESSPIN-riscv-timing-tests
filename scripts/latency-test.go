@@ -145,7 +145,10 @@ func kernel(noop_count uint64, em_dir string, em_bin string) (uint64, uint64, ui
 		}
 	}
 
-	bagpipe.DeleteFile(exe_file)
+	if bagpipe.FileExists(exe_file) {
+		bagpipe.DeleteFile(exe_file)
+	}
+
 	return min_instrs, max_instrs, min_cycles, max_cycles
 }
 
@@ -174,6 +177,12 @@ func exec_one(input bytes.Buffer) bytes.Buffer {
 
 func main() {
 	max_noops := 12
+	const k_output_file = "latency-results.txt"
+
+	if bagpipe.FileExists(k_output_file) {
+		bagpipe.DeleteFile(k_output_file)
+	}
+
 	sprinter := bagpipe.NewSprinter(exec_one, MAX_THREADS, max_noops)
 
 	for noop_count := uint64(0); noop_count < uint64(max_noops); noop_count += 1 {
@@ -212,7 +221,7 @@ func main() {
 		log_line := fmt.Sprintf("noops: %4d\tinstrs: [ %d - %d ]\tcycles: "+
 			"[ %d - %d ]\n", noop_count, min_instrs, max_instrs, min_cycles,
 			max_cycles)
-		bagpipe.AppendFile("latency-results.txt", log_line)
+		bagpipe.AppendFile(k_output_file, log_line)
 	}
 
 	bagpipe.UpdateStatus("finished, results in latency-results.txt\n")
