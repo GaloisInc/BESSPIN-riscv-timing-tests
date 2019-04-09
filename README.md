@@ -17,9 +17,6 @@ written in R.
 
  - [`riscv-tools`](https://github.com/riscv/riscv-tools) in `PATH`.
 
- - Rocket and/or BOOM emulators in `${HOME}/src/rocket-chip` and
-   `${HOME}/src/boom-template` directories respectively.
-
 
 ## Setting Up ##
 
