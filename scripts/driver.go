@@ -39,13 +39,11 @@ const (
 
 var MAX_THREAD_COUNT = 4
 
-var BOOM_DIR = "bin/"
-var BOOM_BIN = "bin/boom-sim"
-// var BOOM_BIN = "./simulator-boom.system-BoomConfig"
+var BOOM_DIR = "../bin/"
+var BOOM_BIN = "./simulator-boom.system-BoomConfig"
 
-var ROCKET_DIR = "bin/"
-var ROCKET_BIN = "bin/rocket-chip-sim"
-// var ROCKET_BIN = "./emulator-freechips.rocketchip.system-DefaultConfig"
+var ROCKET_DIR = "../bin/"
+var ROCKET_BIN = "./emulator-galois.system-P2Config"
 
 var int_objects = []string{
 	"sll", "srl", "sra", "add", "sub", "xor", "and", "or", "slt", "sltu",

@@ -13,11 +13,11 @@ import (
 
 var MAX_THREADS = 4
 
-var BOOM_DIR = bagpipe.HomeDirectory() + "/src/boom-template/verisim"
+var BOOM_DIR = "../bin/"
 var BOOM_BIN = "./simulator-boom.system-BoomConfig"
 
-var ROCKET_DIR = bagpipe.HomeDirectory() + "/src/rocket-chip/emulator"
-var ROCKET_BIN = "./emulator-freechips.rocketchip.system-DefaultConfig"
+var ROCKET_DIR = "../bin/"
+var ROCKET_BIN = "./emulator-galois.system-P2Config"
 
 type input_t struct {
 	Noop_count   string
