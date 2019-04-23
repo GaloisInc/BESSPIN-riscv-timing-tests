@@ -14,13 +14,16 @@
 
   .section ".text.init","ax",@progbits
   .globl _start
+  .align 2
 _start:
   j handle_reset
 
   /* NMI vector */
+  .align 2
 nmi_vector:
   j wtf
 
+  .align 2
 trap_vector:
   j wtf
 
@@ -32,6 +35,7 @@ handle_reset:
   slli t0, t0, 12
   add sp, sp, t0
   csrw mscratch, sp
+  call extra_boot
   la a0, userstart
   j vm_boot
 
@@ -73,6 +77,7 @@ pop_tf:
   sret
 
   .global  trap_entry
+  .align 2
 trap_entry:
   csrrw sp, sscratch, sp
 

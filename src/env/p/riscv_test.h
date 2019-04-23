@@ -9,6 +9,16 @@
 // Begin Macro
 //-----------------------------------------------------------------------
 
+#if __riscv_xlen == 64
+# define STORE    sd
+# define LOAD     ld
+# define REGBYTES 8
+#else
+# define STORE    sw
+# define LOAD     lw
+# define REGBYTES 4
+#endif
+
 #define RVTEST_RV64U                                                    \
   .macro init;                                                          \
   .endm
@@ -56,7 +66,8 @@
 #define INIT_PMP                                                        \
   la t0, 1f;                                                            \
   csrw mtvec, t0;                                                       \
-  li t0, -1;        /* Set up a PMP to permit all accesses */           \
+  /* Set up a PMP to permit all accesses */                             \
+  li t0, (1 << (31 + (__riscv_xlen / 64) * (53 - 31))) - 1;             \
   csrw pmpaddr0, t0;                                                    \
   li t0, PMP_NAPOT | PMP_R | PMP_W | PMP_X;                             \
   csrw pmpcfg0, t0;                                                     \
@@ -97,6 +108,14 @@
 #define RISCV_MULTICORE_DISABLE                                         \
   csrr a0, mhartid;                                                     \
   1: bnez a0, 1b
+
+#define ZERO_BSS							\
+    la t0, _bss_begin;							\
+    la t1, _end;							\
+1:									\
+    STORE x0, (t0);							\
+    add t0, t0, REGBYTES;						\
+    blt t0, t1, 1b;							\
 
 #define EXTRA_TVEC_USER
 #define EXTRA_TVEC_MACHINE
@@ -142,6 +161,7 @@ handle_exception:                                                       \
         j write_tohost;                                                 \
 reset_vector:                                                           \
         RISCV_MULTICORE_DISABLE;                                        \
+	ZERO_BSS;							\
         INIT_SATP;                                                     \
         INIT_PMP;                                                       \
         DELEGATE_NO_TRAPS;                                              \
