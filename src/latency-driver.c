@@ -49,17 +49,11 @@ void empty_loop(unsigned long* instr_count, unsigned long* cycle_count) {
     );
 }
 
-void printstr(const char* s);
-
 int main(int argc, char* argv[]) {
     unsigned long cycles = 0, instrs = 0;
     empty_loop(&instrs, &cycles);
 
-    char buf[64] __attribute__((aligned(64)));
-
-    if (sprintf(buf, "instrs\t%04x\tcycles\t%04x\n", instrs, cycles) > 0) {
-        printstr(buf);
-    }
+    printf("instrs\t%04x\tcycles\t%04x\n", instrs, cycles);
 
     return 0;
 }

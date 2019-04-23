@@ -88,8 +88,6 @@ void busy_loop(unsigned long* instr_count, unsigned long* cycle_count) {
     );
 }
 
-void printstr(const char* s);
-
 int main(int argc, char* argv[]) {
     unsigned long empty_cycles = 0, empty_instrs = 0;
     empty_loop(&empty_instrs, &empty_cycles);
@@ -100,11 +98,7 @@ int main(int argc, char* argv[]) {
     unsigned long instrs = busy_instrs - empty_instrs;
     unsigned long cycles = busy_cycles - empty_cycles;
 
-    char buf[64] __attribute__((aligned(64)));
-
-    if (sprintf(buf, "instrs\t%04x\tcycles\t%04x\n", instrs, cycles) > 0) {
-        printstr(buf);
-    }
+    printf("instrs\t%04x\tcycles\t%04x\n", instrs, cycles);
 
     return 0;
 }
