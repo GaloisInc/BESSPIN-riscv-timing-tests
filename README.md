@@ -28,9 +28,13 @@ Fetch the relevant dependent packages for the Go and R scripts.
     # Fetches code for interpolating and plotting results.
     $ R --no-save < scripts/init.R
 
+Install the RISC-V front-end server shared library needed by the simulators.
+
+    $ sudo install -D -t /opt/riscv/lib/ lib/libfesvr.so 
 
 ### How to Gather Data and Plot Results
 
+    # The driver.go script expects to be called from the src directory.
     cd src
 
     # Adjust the maximum number of concurrent measurements based on the number
