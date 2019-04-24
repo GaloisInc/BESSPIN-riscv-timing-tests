@@ -1,10 +1,10 @@
 # RISC-V Instruction Latency Tests #
 
 This code measures the latency of various RISC-V instructions from the basic
-ISA and from the M, F, and D extensions on the
-[Rocket](https://github.com/freechipsproject/rocket-chip) and
-[BOOM](https://github.com/ucb-bar/riscv-boom) using a Verilator-based
-simulation.
+ISA and from the M, F, and D extensions on the SSITH versions of
+(Chisel P2) [Rocket](https://gitlab-ext.galois.com/ssith/rocket-chip/tree/8355db9508f22691f24d7a5967deed9a9588c60c) and
+(Chisel P3) [BOOM](https://gitlab-ext.galois.com/ssith/boom-template/tree/c93af5067727226e58c639ae8ffffe3bc8395ad0)
+using included Verilator simulations.
 
 
 ## Prerequisites ##
