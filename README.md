@@ -34,12 +34,9 @@ Install the RISC-V front-end server shared library needed by the simulators.
 
 ### How to Gather Data and Plot Results
 
-    # The driver.go script expects to be called from the src directory.
-    cd src
-
     # Adjust the maximum number of concurrent measurements based on the number
     # of processor cores.
-    $ grep "var MAX_THREAD_COUNT" ../scripts/driver.go
+    $ grep "var MAX_THREAD_COUNT" scripts/driver.go
     var MAX_THREAD_COUNT = 4
 
     # Gather measurements for a specific instruction and processor.
@@ -47,17 +44,17 @@ Install the RISC-V front-end server shared library needed by the simulators.
     # Here, we are sweeping through interspersed operands of the 'mul'
     # instruction on the 'rocket' chip.  This will take a while to complete.
 
-    $ go run ../scripts/driver.go sweep --instr mul --arch rocket
-    test complete, results in ../results/rocket/data/out.mul.integer.integer
+    $ go run scripts/driver.go sweep --instr mul --arch rocket
+    test complete, results in results/rocket/data/out.mul.integer.integer
 
     # For giggles, plot the measurements (of the *integer* instruction) using a heat map.
-    $ Rscript ../scripts/plot-int.R ../results/rocket/data/out.mul.integer.integer
+    $ Rscript scripts/plot-int.R results/rocket/data/out.mul.integer.integer
 
     # Generate interpolated results in /tmp/pred.out.
-    $ Rscript ../scripts/interpolate.R ../results/rocket/data/out.mul.integer.integer > /tmp/pred.out
+    $ Rscript scripts/interpolate.R results/rocket/data/out.mul.integer.integer > /tmp/pred.out
 
     # Validate the results of the interpolation.
-    $ go run ../scripts/driver.go validate --instr mul --arch rocket --prediction-file /tmp/pred.out
+    $ go run scripts/driver.go validate --instr mul --arch rocket --prediction-file /tmp/pred.out
     95th percentile error: 0.84 cycle(s), 99th percentile error: 0.91 cycle(s), maximum error: 0.91 cycle(s)
 
     # The results above indicate that the interpolation script was able to

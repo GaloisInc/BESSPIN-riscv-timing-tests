@@ -39,10 +39,10 @@ const (
 
 var MAX_THREAD_COUNT = 4
 
-var BOOM_DIR = "../bin/"
+var BOOM_DIR = "bin/"
 var BOOM_BIN = "./simulator-boom.system-BoomConfig"
 
-var ROCKET_DIR = "../bin/"
+var ROCKET_DIR = "bin/"
 var ROCKET_BIN = "./emulator-galois.system-P2Config"
 
 var int_objects = []string{
@@ -98,7 +98,7 @@ func link(bin string, op1 string, op2 string) string {
 		"common/syscalls.c common/crt.S -static -nostdlib -nostartfiles -lm "+
 		"-lgcc -T common/test.ld", bin, op1, op2, exe_file, driver_file)
 
-	bagpipe.ExecCommand(cmd, bagpipe.WorkingDirectory())
+	bagpipe.ExecCommand(cmd, bagpipe.WorkingDirectory() + "/src")
 	return exe_file
 }
 
@@ -420,7 +420,7 @@ func get_emulator_bin(arch string) string {
 func sweep_instr_operands(arch string, instr string) {
 	emulator_dir := get_emulator_dir(arch)
 	emulator_bin := get_emulator_bin(arch)
-	data_dir := bagpipe.WorkingDirectory() + "/../results/" + arch + "/data"
+	data_dir := bagpipe.WorkingDirectory() + "/results/" + arch + "/data"
 
 	log_filename := "out." + instr
 	if bagpipe.FileExists(data_dir + "/" + log_filename) {
@@ -498,7 +498,7 @@ func sweep_instr_operands(arch string, instr string) {
 		bagpipe.AppendFile(data_dir+"/"+log_filename, log_line+"\n")
 	}
 
-	bagpipe.UpdateStatus("test complete, results in ../results/" + arch +
+	bagpipe.UpdateStatus("test complete, results in results/" + arch +
 		"/data/" + log_filename + "\n")
 }
 

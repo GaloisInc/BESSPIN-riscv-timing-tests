@@ -13,10 +13,10 @@ import (
 
 var MAX_THREADS = 4
 
-var BOOM_DIR = "../bin/"
+var BOOM_DIR = "bin/"
 var BOOM_BIN = "./simulator-boom.system-BoomConfig"
 
-var ROCKET_DIR = "../bin/"
+var ROCKET_DIR = "bin/"
 var ROCKET_BIN = "./emulator-galois.system-P2Config"
 
 type input_t struct {
@@ -111,7 +111,7 @@ func kernel(noop_count uint64, em_dir string, em_bin string) (uint64, uint64, ui
 		"common/syscalls.c common/crt.S -static -nostdlib -nostartfiles -lm "+
 		"-lgcc -T common/test.ld", noop_count, exe_file)
 
-	bagpipe.ExecCommand(cmd, bagpipe.WorkingDirectory())
+	bagpipe.ExecCommand(cmd, bagpipe.WorkingDirectory() + "/src")
 
 	max_instrs := uint64(0)
 	max_cycles := uint64(0)
