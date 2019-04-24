@@ -20,10 +20,7 @@ written in R.
 
 ## Setting Up ##
 
-Fetch the relevant dependent packages for the Go and R scripts.
-
-    # Fetches code for file system and multi-threading APIs.
-    $ go get gitlab.com/ashay/bagpipe
+Fetch the relevant dependent packages for the R scripts.
 
     # Fetches code for interpolating and plotting results.
     $ R --no-save < scripts/init.R

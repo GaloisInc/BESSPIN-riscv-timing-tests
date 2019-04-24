@@ -8,7 +8,7 @@ import (
 	"regexp"
 	"strconv"
 
-	"gitlab.com/ashay/bagpipe"
+	"./bagpipe"
 )
 
 var MAX_THREADS = 4

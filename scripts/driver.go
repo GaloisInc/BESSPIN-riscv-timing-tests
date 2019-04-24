@@ -5,7 +5,6 @@ import (
 	"encoding/gob"
 	"flag"
 	"fmt"
-	"gitlab.com/ashay/bagpipe"
 	"log"
 	"math"
 	"math/rand"
@@ -15,6 +14,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"./bagpipe"
 )
 
 type dtype_t int
