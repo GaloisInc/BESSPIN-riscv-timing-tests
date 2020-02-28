@@ -63,12 +63,14 @@ void wtf()
 #define l1pt pt[0]
 #define user_l2pt pt[1]
 #if __riscv_xlen == 64
-# define NPT 4
+# define NPT 5
 #define kernel_l2pt pt[2]
 # define user_l3pt pt[3]
+#define tohost_l3pt pt[4]
 #else
-# define NPT 2
+# define NPT 3
 # define user_l3pt user_l2pt
+#define tohost_l3pt pt[2]
 #endif
 pte_t pt[NPT][PTES_PER_PT] __attribute__((aligned(PGSIZE)));
 
@@ -238,6 +240,15 @@ void vm_boot(uintptr_t test_addr)
 #endif
   write_csr(sptbr, ((uintptr_t)l1pt >> PGSHIFT) |
                    (vm_choice * (SATP_MODE & ~(SATP_MODE<<1))));
+
+  // map htif memory
+#if __riscv_xlen == 64
+  kernel_l2pt[0x1fe] = ((pte_t)tohost_l3pt >> PGSHIFT << PTE_PPN_SHIFT) | PTE_V;
+  tohost_l3pt[0x1ff] = (HTIF_BASE >> PGSHIFT << PTE_PPN_SHIFT) | PTE_V | PTE_R | PTE_W | PTE_A | PTE_D;
+#else
+  l1pt[0x3fe] = ((pte_t)tohost_l3pt >> PGSHIFT << PTE_PPN_SHIFT) | PTE_V;
+  tohost_l3pt[0x3ff] = (HTIF_BASE >> PGSHIFT << PTE_PPN_SHIFT) | PTE_V | PTE_R | PTE_W | PTE_A | PTE_D;
+#endif
 
   // Set up PMPs if present, ignoring illegal instruction trap if not.
   uintptr_t pmpc = PMP_NAPOT | PMP_R | PMP_W | PMP_X;

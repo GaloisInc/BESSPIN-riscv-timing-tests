@@ -6,6 +6,8 @@
 #include <stdio.h>
 #include <limits.h>
 #include <sys/signal.h>
+#include "fdt.h"
+#include "uart16550.h"
 #include "util.h"
 
 #define SYS_write 64
@@ -74,9 +76,35 @@ void abort()
   exit(128 + SIGABRT);
 }
 
+extern int _write(int file, char *ptr, int len)
+{
+	int count = len;
+	if (file == 1) {
+		while (count > 0) {
+			uart16550_putchar(*ptr);
+			++ptr;
+			--count;
+		}
+	}
+	return len;
+}
+
 void printstr(const char* s)
 {
-  syscall(SYS_write, 1, (uintptr_t)s, strlen(s));
+  if (uart16550)
+  {
+    int count;
+    count = strlen(s);
+    while (count > 0) {
+      uart16550_putchar(*s);
+      ++s;
+      --count;
+    }
+  }
+  else
+  {
+    syscall(SYS_write, 1, (uintptr_t)s, strlen(s));
+  }
 }
 
 void __attribute__((weak)) thread_entry(int cid, int nc)
@@ -109,6 +137,9 @@ void _init(int cid, int nc)
   init_tls();
   thread_entry(cid, nc);
 
+  // Setup UART if we have one
+  query_uart16550(FDT_ADDR);
+
   // only single-threaded programs should ever get here.
   int ret = main(0, 0);
 
@@ -123,8 +154,7 @@ void _init(int cid, int nc)
   exit(ret);
 }
 
-#undef putchar
-int putchar(int ch)
+int htif_putchar(int ch)
 {
   static __thread char buf[64] __attribute__((aligned(64)));
   static __thread int buflen = 0;
@@ -138,6 +168,20 @@ int putchar(int ch)
   }
 
   return 0;
+}
+
+#undef putchar
+int putchar(int ch)
+{
+  if (uart16550)
+  {
+     if (ch == '\n') {
+       uart16550_putchar('\r');
+     }
+     return uart16550_putchar(ch);
+  } else {
+     return htif_putchar(ch);
+  }
 }
 
 void printhex(uint64_t x)
@@ -467,4 +511,37 @@ long atol(const char* str)
   }
 
   return sign ? -res : res;
+}
+
+#undef getchar
+int getchar()
+{
+  if (uart16550)
+    return uart16550_getchar();
+  else
+    return -1;
+}
+
+void read_input(char* buf, int len)
+{
+  char tmp;
+  int count;
+
+  if (uart16550)
+  {
+    count = 0;
+    while(count < len)
+    {
+      tmp = getchar();
+      if (tmp == '\r')
+      {
+        buf[count] = '\0';
+	putchar('\n');
+        break;
+      } else {
+        buf[count++] = tmp;
+	putchar(tmp);
+      }
+    }
+  }
 }

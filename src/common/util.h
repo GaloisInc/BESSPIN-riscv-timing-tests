@@ -9,6 +9,8 @@ extern void setStats(int enable);
 
 #define static_assert(cond) switch(0) { case 0: case !!(long)(cond): ; }
 
+void read_input(char *buf, int len);
+
 static int verify(int n, const volatile int* test, const int* verify)
 {
   int i;
