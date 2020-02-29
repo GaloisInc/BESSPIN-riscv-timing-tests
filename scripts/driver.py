@@ -11,7 +11,24 @@ sys.path.append(os.environ['BESSPIN_GFE_SCRIPT_DIR'])
 from test_gfe_unittest import TestGfeP1,TestGfeP2,TestGfeP3
 
 class BaseTimingTest:
-    pass
+    def run_timing_test(self, elf):
+        self.gfe.gdb_session.interrupt()
+        self.gfe.launchElf(elf,verify=False)
+
+    def collect_lines(self, n):
+        collected = []
+        nlines = 0
+        while nlines < n:
+            pending = self.gfe.uart_session.in_waiting
+            if pending:
+                fetched = self.gfe.uart_session.read(pending)
+                fetchedLines = fetched.decode('utf-8').rstrip().split('\n')
+                for l in fetchedLines:
+                    if 'instr' in l:
+                        collected.append(l)
+                nlines = len(collected)
+        return collected
+
 
 class TimingTestP1(TestGfeP1, BaseTimingTest):
     pass
@@ -33,19 +50,21 @@ def floatOperands(mantissabits, expbits):
 
     mantissaMask = ones(mantissabits)
     expMask      = ones(expbits)
+    fixed        = [ 0,
+                     expMask << mantissabits, # Positive Inf
+                     (expMask << mantissabits) | (1 << 31), # Negative Inf
+                   ]
     def oneRound():
         mantissa = random.randint(1,mantissaMask) # 23 bits
         exponent = random.randint(1,expMask) << mantissabits
         subnormal   = random.randint(1,mantissaMask)
         subnormal2  = random.randint(1,mantissaMask)
-        return [ 0, # Zero
-                 mantissa | exponent, # Normal float
+        return [ mantissa | exponent, # Normal float
                  subnormal, # Subnormal
-                 expMask << mantissabits, # Positive Inf
-                 (expMask << mantissabits) | (1 << 31), # Negative Inf
                  (expMask << mantissabits) | subnormal2, # NAN
-        ]
-    ops = oneRound()
+               ]
+    ops = fixed
+    ops = ops + oneRound()
     ops = ops + oneRound()
     ops = ops + oneRound()
     return ops
@@ -72,7 +91,7 @@ INT_OPS = [ "sll",
             "or",
             "slt",
             "sltu",
-	        "mul",
+	    "mul",
             "mulh",
             "mulhsu",
             "mulhu",
@@ -97,6 +116,23 @@ def sweepOperands(sweepConfig):
     return OPERANDS[sweepConfig['instr_type']](sweepConfig['xlen'])
 
 def sweep(sweepConfig):
+    # Pick the tester
+    hFpga = None
+    if sweepConfig['ptype'] == 'p1':
+        hFpga = TimingTestP1()
+    elif sweepConfig['ptype'] == 'p2':
+        hFpga = TimingTestP2()
+    elif sweepConfig['ptype'] == 'p3':
+        hFpga = TimingTestP3()
+    else:
+        print("I don't know what sort of fpga to use!")
+        print(f"Unhandled ptype: {sweepConfig['ptype']}")
+        sys.exit(1)
+
+    hFpga.setUp()
+    hFpga.setupUart()
+
+    # Set up build dir
     workDir = tempfile.TemporaryDirectory(prefix="timing-work")
     srcLoc = os.path.join(os.path.dirname(sys.argv[0]), "../src")
     buildLoc = os.path.join(workDir.name, "work")
@@ -108,28 +144,43 @@ def sweep(sweepConfig):
     i = sweepConfig['instr']
     t = sweepConfig['instr_type']
     n = len(operands)*len(operands)
-    c = 0
 
     print(f"Sweeping {t} instruction: {i}")
+
+    # Generate a script containing all the make invocations
+    # so that we don't open so many subprocesses
+    f = open("build.sh", "w")
+    cmd = []
     for o1 in operands:
         for o2 in operands:
-            c = c + 1
-            try:
-                subprocess.check_output(f"make INST={i} OP1={o1} OP2={o2} TYPE={t}".split(" "), stderr=subprocess.STDOUT)
-            except subprocess.CalledProcessError as e:
-                print(e.output)
-                sys.exit(1)
-            pct = math.floor((c / n) * 40)
-            print("Compiling Tests: [" + "#"*pct + "-"*(40-pct) + "]", end="\r")
+            f.write(f"make INST={i} OP1={o1} OP2={o2} TYPE={t}\n")
+    f.close()
+    try:
+        print("Compiling tests...",end="",flush=True)
+        subprocess.check_output(["bash", "build.sh"], stderr=subprocess.STDOUT)
+        print("Done")
+    except subprocess.CalledProcessError as e:
+        print(e.output)
+        sys.exit(1)
 
+    # Execute each test
+    files = glob.glob(os.path.join('build', '*'))
+    # c and pct help print a pretty progress bar
     c = 0
-    print("\n")
-    breakpoint()
-    for f in glob.glob(os.path.join('build', '*')):
+    lines = []
+    for f in files:
         c  = c + 1
         pct = math.floor((c / n) * 40)
-        print("Running Tests: [" + "#"*pct + "-"*(40-pct) + "]", end="\r")
+        # hFpga.check_in_output(f, 5, ["instrs"])
+        hFpga.run_timing_test(f)
+        l = hFpga.collect_lines(1)
+        lines.append(l[0])
+        print(f"Running:\t{c}/{n}[" + "#"*pct + "-"*(40-pct) + "]", end="\r")
+    print("")
+    print("\n".join(lines))
+
 DESCR = 'Collect instruction timing statistics'
+
 
 
 def parseProc(procstr):

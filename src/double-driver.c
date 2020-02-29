@@ -21,7 +21,7 @@ void empty_loop(unsigned long* instr_count, unsigned long* cycle_count) {
 
         "_init:"
             "mv             x20,    zero;"
-            "li             x21,    10;"
+            "li             x21,    50;"
             "li             x22, "  xstr(OP1) ";"
             "li             x23, "  xstr(OP2) ";"
             "fmv.d.x        f22,    x22;"
@@ -64,7 +64,7 @@ void busy_loop(unsigned long* instr_count, unsigned long* cycle_count) {
 
         "init:"
             "mv             x20,    zero;"
-            "li             x21,    10;"
+            "li             x21,    50;"
             "li             x22, "  xstr(OP1) ";"
             "li             x23, "  xstr(OP2) ";"
             "fmv.d.x        f22,    x22;"
@@ -99,7 +99,7 @@ int main(int argc, char* argv[]) {
     unsigned long instrs = busy_instrs - empty_instrs;
     unsigned long cycles = busy_cycles - empty_cycles;
 
-    printf("instrs\t%04x\tcycles\t%04x\n", instrs, cycles);
+    printf("op1\t%llx\top2\t%llx\tinstrs\t%04x\tcycles\t%04x\n", OP1, OP2, instrs, cycles);
 
     return 0;
 }
