@@ -37,8 +37,29 @@ class TimingTestP2(TestGfeP2, BaseTimingTest):
 class TimingTestP3(TestGfeP3, BaseTimingTest):
     pass
 
+class TimingMockTester:
+    def __init__(self):
+        self.lines = []
+    def setUp(self):
+        pass
+    def setupUart(self):
+        pass
+    def run_timing_test(self, f):
+        words = os.path.basename(f).split(".")
+        if words[1] == "int":
+            # test.int.int_instr.op1.op2
+            op1,op2 = words[3:]
+        else:
+            # test.fop.finstr.[ds].op1.op2
+            op1,op2 = words[4:]
+        op1 = hex(int(op1))[2:]
+        op2 = hex(int(op2))[2:]
+        self.lines.append(f"op1\t{op1}\top2\t{op2}\tinstrs\tb\tcycles\t35")
 
-# test = TimingTest()
+    def collect_lines(self, n):
+        ret = self.lines[:n]
+        self.lines = self.lines[n:]
+        return ret
 
 instructions = []
 def intOperands(xlen):
@@ -91,7 +112,7 @@ INT_OPS = [ "sll",
             "or",
             "slt",
             "sltu",
-	    "mul",
+	        "mul",
             "mulh",
             "mulhsu",
             "mulhu",
@@ -115,10 +136,39 @@ DP_FL_OPS = [ op + ".d" for op in FL_OPS ]
 def sweepOperands(sweepConfig):
     return OPERANDS[sweepConfig['instr_type']](sweepConfig['xlen'])
 
+def buildTests(i, t, operands):
+    f = open("build.sh", "w")
+    cmd = []
+    for o1 in operands:
+        for o2 in operands:
+            f.write(f"make INST={i} OP1={o1} OP2={o2} TYPE={t}\n")
+    f.close()
+    try:
+        print("Compiling tests...",end="",flush=True)
+        subprocess.check_output(["bash", "build.sh"], stderr=subprocess.STDOUT)
+        print("Done")
+    except subprocess.CalledProcessError as e:
+        print(e.output)
+        sys.exit(1)
+
+def format_line(line):
+    _, op1, _, op2, _, istrs, _, cycles = line.split('\t')
+    op1    = int(op1,16)
+    op2    = int(op2,16)
+    istrs  = int(istrs,16)
+    cycles = int(cycles,16)
+    cpi    = cycles/istrs
+    return f"{op1} {op2} {hex(istrs)[2:]} {cpi}\n"
+
+def format_lines(lines):
+    return [ format_line(line) for line in lines ]
+
 def sweep(sweepConfig):
     # Pick the tester
     hFpga = None
-    if sweepConfig['ptype'] == 'p1':
+    if sweepConfig['dry_run']:
+        hFpga = TimingMockTester()
+    elif sweepConfig['ptype'] == 'p1':
         hFpga = TimingTestP1()
     elif sweepConfig['ptype'] == 'p2':
         hFpga = TimingTestP2()
@@ -139,6 +189,7 @@ def sweep(sweepConfig):
     shutil.copytree(srcLoc, buildLoc)
     os.chdir(buildLoc)
     os.mkdir("build")
+
     # Get the operands we are going to test
     operands = sweepOperands(sweepConfig)
     i = sweepConfig['instr']
@@ -149,39 +200,24 @@ def sweep(sweepConfig):
 
     # Generate a script containing all the make invocations
     # so that we don't open so many subprocesses
-    f = open("build.sh", "w")
-    cmd = []
-    for o1 in operands:
-        for o2 in operands:
-            f.write(f"make INST={i} OP1={o1} OP2={o2} TYPE={t}\n")
-    f.close()
-    try:
-        print("Compiling tests...",end="",flush=True)
-        subprocess.check_output(["bash", "build.sh"], stderr=subprocess.STDOUT)
-        print("Done")
-    except subprocess.CalledProcessError as e:
-        print(e.output)
-        sys.exit(1)
+    buildTests(i, t, operands)
 
     # Execute each test
     files = glob.glob(os.path.join('build', '*'))
-    # c and pct help print a pretty progress bar
-    c = 0
+    c = 0 # number of tests for pretty-printing a progress bar
     lines = []
     for f in files:
         c  = c + 1
         pct = math.floor((c / n) * 40)
-        # hFpga.check_in_output(f, 5, ["instrs"])
         hFpga.run_timing_test(f)
         l = hFpga.collect_lines(1)
         lines.append(l[0])
         print(f"Running:\t{c}/{n}[" + "#"*pct + "-"*(40-pct) + "]", end="\r")
     print("")
-    print("\n".join(lines))
+    for l in format_lines(lines):
+        sweepConfig['output'].write(l)
 
 DESCR = 'Collect instruction timing statistics'
-
-
 
 def parseProc(procstr):
     try:
@@ -214,6 +250,7 @@ def parseConfig(arglist):
     sweep.add_argument('--proc',  type=str)
     sweep.add_argument('--dry_run', action='store_true', default=False)
     sweep.add_argument('--keep_temp', action='store_true', default=False)
+    sweep.add_argument('--output', type=str)
 
     args = parser.parse_args(arglist)
 
@@ -225,13 +262,22 @@ def parseConfig(arglist):
              'instr_type' : instrType(args.instr),
              'mode'       : args.cmd,
              'dry_run'    : args.dry_run,
-             'no_cleanup' : args.keep_temp
+             'no_cleanup' : args.keep_temp,
+             'output'     : args.output
            }
 
 def main(args):
     cfg = parseConfig(args)
     if cfg['mode'] == "sweep":
+        try:
+            output = cfg['output']
+            out = open(cfg['output'], 'w')
+            cfg['output'] = out
+        except:
+            print(f"Error opening {output} for writing")
+            sys.exit(1)
         sweep(cfg)
+
 
 if __name__ == "__main__":
     main(sys.argv[1:])
