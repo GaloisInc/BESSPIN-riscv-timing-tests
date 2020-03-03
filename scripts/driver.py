@@ -183,9 +183,13 @@ def sweep(sweepConfig):
     hFpga.setupUart()
 
     # Set up build dir
-    workDir = tempfile.TemporaryDirectory(prefix="timing-work")
+    workDirName = sweepConfig['work_dir']
+    if workDirName is None:
+        workDir = tempfile.TemporaryDirectory(prefix="timing-work")
+        workDirName = workDir.name
+
     srcLoc = os.path.join(os.path.dirname(sys.argv[0]), "../src")
-    buildLoc = os.path.join(workDir.name, "work")
+    buildLoc = os.path.join(workDirName, "work")
     shutil.copytree(srcLoc, buildLoc)
     os.chdir(buildLoc)
     os.mkdir("build")
@@ -251,6 +255,7 @@ def parseConfig(arglist):
     sweep.add_argument('--dry_run', action='store_true', default=False)
     sweep.add_argument('--keep_temp', action='store_true', default=False)
     sweep.add_argument('--output', type=str)
+    sweep.add_argument('--work_dir', type=str, default=None)
 
     args = parser.parse_args(arglist)
 
@@ -263,7 +268,8 @@ def parseConfig(arglist):
              'mode'       : args.cmd,
              'dry_run'    : args.dry_run,
              'no_cleanup' : args.keep_temp,
-             'output'     : args.output
+             'output'     : args.output,
+             'work_dir'   : args.work_dir
            }
 
 def main(args):
