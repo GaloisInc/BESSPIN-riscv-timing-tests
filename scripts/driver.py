@@ -290,7 +290,8 @@ def sweep(sweepConfig):
         hFpga.run_timing_test(t)
         l = hFpga.collect_lines(1)
         lines.append(l[0])
-        print(f"Running:\t{c}/{n}[" + "#"*pct + "-"*(40-pct) + "]", end="\r")
+        print(f"Running:\t{c}/{n} [" + "#"*pct + "-"*(40-pct) + "]", end="\r")
+    print("")
     for l in format_lines(ty, lines):
         sweepConfig['output'].write(l)
 
