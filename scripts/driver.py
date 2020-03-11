@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-import sys, os, glob
+import sys, os, glob, stat
 import argparse
 import random
 import math
@@ -209,7 +209,16 @@ def setupBuildDir(sweepConfig):
     srcLoc = os.path.join(os.path.dirname(sys.argv[0]), "../src")
     buildLoc = os.path.join(workDirName, "work")
     shutil.copytree(srcLoc, buildLoc)
+    dperm = stat.S_IRUSR | stat.S_IWUSR | stat.S_IXUSR
+    fperm = stat.S_IRUSR | stat.S_IWUSR
+    os.chmod(buildLoc, dperm)
     os.chdir(buildLoc)
+
+    for root,dirs,fs in os.walk("."):
+        for d in dirs:
+            os.chmod(os.path.join(root,d), dperm)
+        for f in fs:
+            os.chmod(os.path.join(root,f), fperm)
 
     # Sometimes build is left over from development, so nuke it in
     # the work-dir copy
@@ -229,7 +238,6 @@ def getFpgaHandle(sweepConfig):
     if not sweepConfig['no_program']:
         print("Programming fpga with " + sweepConfig['proc'])
         try:
-            breakpoint()
             subprocess.check_output(["gfe-program-fpga", sweepConfig['proc']])
         except subprocess.CalledProcessError as e:
             print(f"Failed to program fpga {sweepConfig['proc']}:")
@@ -315,11 +323,11 @@ def parseConfig(arglist):
     subparsers = parser.add_subparsers(dest='cmd')
 
     sweep      = subparsers.add_parser('sweep')
-    sweep.add_argument('--instr', type=str)
-    sweep.add_argument('--proc',  type=str)
+    sweep.add_argument('instr', type=str)
+    sweep.add_argument('proc',  type=str)
+    sweep.add_argument('output', type=str)
     sweep.add_argument('--dry_run', action='store_true', default=False)
     sweep.add_argument('--keep_temp', action='store_true', default=False)
-    sweep.add_argument('--output', type=str)
     sweep.add_argument('--work_dir', type=str, default=None)
     sweep.add_argument('--no_program', action='store_true', default=False)
 
