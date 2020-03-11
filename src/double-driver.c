@@ -5,7 +5,7 @@
 #define str(s)  #s
 
 __attribute__((aligned(256)))
-void empty_loop(unsigned long* instr_count, unsigned long* cycle_count) {
+void empty_loop(unsigned long long* instr_count, unsigned long long* cycle_count) {
     *instr_count = 0;
     *cycle_count = 0;
 
@@ -21,7 +21,7 @@ void empty_loop(unsigned long* instr_count, unsigned long* cycle_count) {
 
         "_init:"
             "mv             x20,    zero;"
-            "li             x21,    50;"
+            "li             x21, "  xstr(N)   ";"
             "li             x22, "  xstr(OP1) ";"
             "li             x23, "  xstr(OP2) ";"
             "fmv.d.x        f22,    x22;"
@@ -47,7 +47,7 @@ void empty_loop(unsigned long* instr_count, unsigned long* cycle_count) {
 }
 
 __attribute__((aligned(256)))
-void busy_loop(unsigned long* instr_count, unsigned long* cycle_count) {
+void busy_loop(unsigned long long* instr_count, unsigned long long* cycle_count) {
     *instr_count = 0;
     *cycle_count = 0;
 
@@ -64,7 +64,7 @@ void busy_loop(unsigned long* instr_count, unsigned long* cycle_count) {
 
         "init:"
             "mv             x20,    zero;"
-            "li             x21,    50;"
+            "li             x21, "  xstr(N)   ";"
             "li             x22, "  xstr(OP1) ";"
             "li             x23, "  xstr(OP2) ";"
             "fmv.d.x        f22,    x22;"
@@ -88,18 +88,17 @@ void busy_loop(unsigned long* instr_count, unsigned long* cycle_count) {
         : "x0", "x20", "x21", "x22", "x23", "x25", "x26", "x27", "x28", "cc"
     );
 }
-
 int main(int argc, char* argv[]) {
-    unsigned long empty_cycles = 0, empty_instrs = 0;
+    unsigned long long empty_cycles = 0, empty_instrs = 0;
     empty_loop(&empty_instrs, &empty_cycles);
 
-    unsigned long busy_cycles = 0, busy_instrs = 0;
+    unsigned long long busy_cycles = 0, busy_instrs = 0;
     busy_loop(&busy_instrs, &busy_cycles);
 
-    unsigned long instrs = busy_instrs - empty_instrs;
-    unsigned long cycles = busy_cycles - empty_cycles;
+    unsigned long long instrs = busy_instrs - empty_instrs;
+    unsigned long long cycles = busy_cycles - empty_cycles;
 
-    printf("op1\t%llx\top2\t%llx\tinstrs\t%04x\tcycles\t%04x\n", OP1, OP2, instrs, cycles);
+    printf("op1\t%llx\top2\t%llx\tinstrs\t%llx\tcycles\t%llx\n", (unsigned long long)OP1, (unsigned long long)OP2, instrs, cycles);
 
     return 0;
 }

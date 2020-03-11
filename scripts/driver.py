@@ -9,19 +9,21 @@ import subprocess
 
 sys.path.append(os.environ['BESSPIN_GFE_SCRIPT_DIR'])
 from test_gfe_unittest import TestGfeP1,TestGfeP2,TestGfeP3
-
+read = 0
 class BaseTimingTest:
     def run_timing_test(self, elf):
         self.gfe.gdb_session.interrupt()
-        self.gfe.launchElf(elf,verify=False)
+        self.gfe.launchElf(elf,gdb_log=True,openocd_log=True,verify=True)
 
     def collect_lines(self, n):
+        global read
         collected = []
         nlines = 0
         while nlines < n:
             pending = self.gfe.uart_session.in_waiting
             if pending:
                 fetched = self.gfe.uart_session.read(pending)
+                read = read + pending
                 fetchedLines = fetched.decode('utf-8').rstrip().split('\n')
                 for l in fetchedLines:
                     if 'instr' in l:
@@ -65,15 +67,16 @@ instructions = []
 def intOperands(xlen):
     return [ (1 << (8*idx)) - 1 for idx in range(0,8) ]
 
+def ones(n):
+    return (1 << n) - 1
+
 def floatOperands(mantissabits, expbits):
-    def ones(n):
-        return (1 << n) - 1
 
     mantissaMask = ones(mantissabits)
     expMask      = ones(expbits)
     fixed        = [ 0,
                      expMask << mantissabits, # Positive Inf
-                     (expMask << mantissabits) | (1 << 31), # Negative Inf
+                     (expMask << mantissabits) | (1 << (mantissabits+expbits)), # Negative Inf
                    ]
     def oneRound():
         mantissa = random.randint(1,mantissaMask) # 23 bits
@@ -83,12 +86,27 @@ def floatOperands(mantissabits, expbits):
         return [ mantissa | exponent, # Normal float
                  subnormal, # Subnormal
                  (expMask << mantissabits) | subnormal2, # NAN
-               ]
-    ops = fixed
-    ops = ops + oneRound()
+               ] + fixed
+    ops = oneRound()
     ops = ops + oneRound()
     ops = ops + oneRound()
     return ops
+
+def classify(v, mantissabits, expbits):
+    widthmask = ones(mantissabits + expbits + 1)
+    exp = (v >> mantissabits) & ones(expbits)
+    if exp == 0:
+        if (v << 1) & widthmask != 0:
+            return "subnormal"
+        return "zero"
+    elif exp == ones(expbits):
+        if (v << (expbits + 1)) & widthmask != 0:
+            return "nan"
+        if v >> (mantissabits+expbits) == 0:
+            return "+inf"
+        return "-inf"
+    return "normal"
+
 
 def singlePrecOperands(xlen):
     return floatOperands(23,8)
@@ -136,12 +154,15 @@ DP_FL_OPS = [ op + ".d" for op in FL_OPS ]
 def sweepOperands(sweepConfig):
     return OPERANDS[sweepConfig['instr_type']](sweepConfig['xlen'])
 
-def buildTests(i, t, operands):
+def buildTests(i, t, operands, xlen):
     f = open("build.sh", "w")
     cmd = []
+    ts = []
     for o1 in operands:
         for o2 in operands:
-            f.write(f"make INST={i} OP1={o1} OP2={o2} TYPE={t}\n")
+            ts.append(f"build/test.{t}.{i}.{o1}.{o2}")
+            f.write(f"make INST={i} OP1={o1} OP2={o2} TYPE={t} N={100} XLEN={xlen}\n")
+    print(f"{i} make invocations written.")
     f.close()
     try:
         print("Compiling tests...",end="",flush=True)
@@ -150,18 +171,25 @@ def buildTests(i, t, operands):
     except subprocess.CalledProcessError as e:
         print(e.output)
         sys.exit(1)
+    return ts
 
-def format_line(line):
+def format_line(ty, line):
     _, op1, _, op2, _, istrs, _, cycles = line.split('\t')
     op1    = int(op1,16)
     op2    = int(op2,16)
+    if ty == "single":
+        op1    = classify(op1, 23, 8)
+        op2    = classify(op2, 23, 8)
+    elif ty == "double":
+        op1    = classify(op1, 52, 11)
+        op2    = classify(op2, 52, 11)
     istrs  = int(istrs,16)
     cycles = int(cycles,16)
     cpi    = cycles/istrs
     return f"{op1} {op2} {hex(istrs)[2:]} {cpi}\n"
 
-def format_lines(lines):
-    return [ format_line(line) for line in lines ]
+def format_lines(t,lines):
+    return [ format_line(t,line) for line in lines ]
 
 def sweep(sweepConfig):
     # Pick the tester
@@ -197,28 +225,26 @@ def sweep(sweepConfig):
     # Get the operands we are going to test
     operands = sweepOperands(sweepConfig)
     i = sweepConfig['instr']
-    t = sweepConfig['instr_type']
-    n = len(operands)*len(operands)
+    ty = sweepConfig['instr_type']
+    x = hFpga.getXlen()
 
     print(f"Sweeping {t} instruction: {i}")
 
     # Generate a script containing all the make invocations
     # so that we don't open so many subprocesses
-    buildTests(i, t, operands)
+    ts = buildTests(i, t, operands, x)
 
-    # Execute each test
-    files = glob.glob(os.path.join('build', '*'))
     c = 0 # number of tests for pretty-printing a progress bar
     lines = []
-    for f in files:
+    n = len(ts)
+    for t in ts:
         c  = c + 1
         pct = math.floor((c / n) * 40)
-        hFpga.run_timing_test(f)
+        hFpga.run_timing_test(t)
         l = hFpga.collect_lines(1)
         lines.append(l[0])
         print(f"Running:\t{c}/{n}[" + "#"*pct + "-"*(40-pct) + "]", end="\r")
-    print("")
-    for l in format_lines(lines):
+    for l in format_lines(ty, lines):
         sweepConfig['output'].write(l)
 
 DESCR = 'Collect instruction timing statistics'
@@ -286,4 +312,7 @@ def main(args):
 
 
 if __name__ == "__main__":
-    main(sys.argv[1:])
+    try:
+        main(sys.argv[1:])
+    except SystemExit as e:
+        print("die")

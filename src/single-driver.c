@@ -36,9 +36,13 @@ void empty_loop(unsigned long* instr_count, unsigned long* cycle_count) {
             "csrr           x27,    mcycle;"
             "csrr           x28,    minstret;"
             "fence;"
-
+#if XLEN == 32
+            "sub           %[c],   x27, x25;"
+            "sub           %[i],   x28, x26;"
+#else
             "subw           %[c],   x27, x25;"
             "subw           %[i],   x28, x26;"
+#endif
 
         : [c] "=r" (*cycle_count), [i] "=r" (*instr_count)
         :
@@ -80,8 +84,13 @@ void busy_loop(unsigned long* instr_count, unsigned long* cycle_count) {
             "csrr           x28,    minstret;"
             "fence;"
 
+#if XLEN == 32
+            "sub           %[c],   x27, x25;"
+            "sub           %[i],   x28, x26;"
+#else
             "subw           %[c],   x27, x25;"
             "subw           %[i],   x28, x26;"
+#endif
 
         : [c] "=r" (*cycle_count), [i] "=r" (*instr_count)
         :
