@@ -158,11 +158,13 @@ def buildTests(i, t, operands, xlen):
     f = open("build.sh", "w")
     cmd = []
     ts = []
+    n = 0
     for o1 in operands:
         for o2 in operands:
             ts.append(f"build/test.{t}.{i}.{o1}.{o2}")
             f.write(f"make INST={i} OP1={o1} OP2={o2} TYPE={t} N={100} XLEN={xlen}\n")
-    print(f"{i} make invocations written.")
+            n = n+1
+    print(f"{n} tests to build.")
     f.close()
     try:
         print("Compiling tests...",end="",flush=True)
@@ -191,8 +193,49 @@ def format_line(ty, line):
 def format_lines(t,lines):
     return [ format_line(t,line) for line in lines ]
 
-def sweep(sweepConfig):
-    # Pick the tester
+def setupBuildDir(sweepConfig):
+    # Set up build dir -- either user provided
+    # or a new temporary directory
+    workDirName = sweepConfig['work_dir']
+    if workDirName is None:
+        workDir = tempfile.TemporaryDirectory(prefix="timing-work")
+        workDirName = workDir.name
+        # The directory will get cleaned up and hence deleted if we don't
+        # keep around a live reference to it, so that's why we're saving it
+        # in the config (and hey, it might be useful later)
+        sweepConfig['work_dir'] = workDir
+
+    # Copy the C sources to "<work-directory>/work"
+    srcLoc = os.path.join(os.path.dirname(sys.argv[0]), "../src")
+    buildLoc = os.path.join(workDirName, "work")
+    shutil.copytree(srcLoc, buildLoc)
+    os.chdir(buildLoc)
+
+    # Sometimes build is left over from development, so nuke it in
+    # the work-dir copy
+    try:
+        os.mkdir("build")
+    except FileExistsError as e:
+        shutil.rmtree("build")
+        os.mkdir("build")
+
+    # Clean up any objects that were left lying around during e.g. development
+    for d,_,fs in os.walk("."):
+        for f in fs:
+            if os.path.splitext(f)[1] == ".o":
+                os.rm(os.path.join(d,f))
+
+def getFpgaHandle(sweepConfig):
+    if not sweepConfig['no_program']:
+        print("Programming fpga with " + sweepConfig['proc'])
+        try:
+            breakpoint()
+            subprocess.check_output(["gfe-program-fpga", sweepConfig['proc']])
+        except subprocess.CalledProcessError as e:
+            print(f"Failed to program fpga {sweepConfig['proc']}:")
+            print(e)
+            sys.exit(1)
+
     hFpga = None
     if sweepConfig['dry_run']:
         hFpga = TimingMockTester()
@@ -210,29 +253,25 @@ def sweep(sweepConfig):
     hFpga.setUp()
     hFpga.setupUart()
 
-    # Set up build dir
-    workDirName = sweepConfig['work_dir']
-    if workDirName is None:
-        workDir = tempfile.TemporaryDirectory(prefix="timing-work")
-        workDirName = workDir.name
+    return hFpga
 
-    srcLoc = os.path.join(os.path.dirname(sys.argv[0]), "../src")
-    buildLoc = os.path.join(workDirName, "work")
-    shutil.copytree(srcLoc, buildLoc)
-    os.chdir(buildLoc)
-    os.mkdir("build")
+def sweep(sweepConfig):
+    # Pick the tester
+    hFpga = getFpgaHandle(sweepConfig)
+
+    setupBuildDir(sweepConfig)
 
     # Get the operands we are going to test
     operands = sweepOperands(sweepConfig)
     i = sweepConfig['instr']
     ty = sweepConfig['instr_type']
-    x = hFpga.getXlen()
+    x = sweepConfig['xlen']
 
-    print(f"Sweeping {t} instruction: {i}")
+    print(f"Sweeping instruction: {i} [{ty}]")
 
     # Generate a script containing all the make invocations
     # so that we don't open so many subprocesses
-    ts = buildTests(i, t, operands, x)
+    ts = buildTests(i, ty, operands, x)
 
     c = 0 # number of tests for pretty-printing a progress bar
     lines = []
@@ -282,6 +321,7 @@ def parseConfig(arglist):
     sweep.add_argument('--keep_temp', action='store_true', default=False)
     sweep.add_argument('--output', type=str)
     sweep.add_argument('--work_dir', type=str, default=None)
+    sweep.add_argument('--no_program', action='store_true', default=False)
 
     args = parser.parse_args(arglist)
 
@@ -289,13 +329,15 @@ def parseConfig(arglist):
 
     return { 'xlen'       : 32 if 'p1' == proc[1] else 64,
              'ptype'      : proc[1],
+             'proc'       : args.proc,
              'instr'      : args.instr,
              'instr_type' : instrType(args.instr),
              'mode'       : args.cmd,
              'dry_run'    : args.dry_run,
              'no_cleanup' : args.keep_temp,
              'output'     : args.output,
-             'work_dir'   : args.work_dir
+             'work_dir'   : args.work_dir,
+             'no_program' : args.no_program
            }
 
 def main(args):
