@@ -321,7 +321,7 @@ def instrType(instr):
 
 def parseConfig(arglist):
     parser     = argparse.ArgumentParser(description=DESCR)
-    subparsers = parser.add_subparsers(dest='cmd')
+    subparsers = parser.add_subparsers(metavar='cmd', dest='cmd', help='command to run {sweep}', required=True)
 
     sweep      = subparsers.add_parser('sweep')
     sweep.add_argument('instr', type=str)
@@ -334,6 +334,7 @@ def parseConfig(arglist):
 
     args = parser.parse_args(arglist)
 
+    breakpoint()
     proc = parseProc(args.proc)
 
     return { 'xlen'       : 32 if 'p1' == proc[1] else 64,
