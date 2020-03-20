@@ -334,7 +334,6 @@ def parseConfig(arglist):
 
     args = parser.parse_args(arglist)
 
-    breakpoint()
     proc = parseProc(args.proc)
 
     return { 'xlen'       : 32 if 'p1' == proc[1] else 64,
