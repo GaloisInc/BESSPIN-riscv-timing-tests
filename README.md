@@ -1,4 +1,4 @@
-# RISC-V Instruction Latency Tests #
+# BESSPIN RISC-V Instruction Latency Tests #
 
 This code measures the latency of various RISC-V instructions from the basic
 ISA and from the M, F, and D extensions on SSITH processors
